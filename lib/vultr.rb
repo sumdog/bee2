@@ -6,19 +6,20 @@ class VultrProvisioner
 
   def initialize(config)
     @log = Logger.new(STDOUT)
-    Vultr.api_key = config['vultr']['token']
+    Vultr.api_key = config['provisioner']['token']
+    @inventory_files = config['inventory']
     @servers = config['servers']
-    @ssh_key = File.read(config['vultr']['ssh_key'])
+    @ssh_key = File.read(config['provisioner']['ssh_key'])
 
     @DCID =  Vultr::Regions.list[:result].find { |id,region|
-      region['regioncode'] == config['vultr']['region']
+      region['regioncode'] == config['provisioner']['region']
     }.last['DCID']
     if @DCID.nil?
-      @log.fatal("Invalid Data Center #{config['vultr']['region']}")
+      @log.fatal("Invalid Data Center #{config['provisioner']['region']}")
       exit 1
     end
 
-    @state_file = config['vultr']['state-file']
+    @state_file = config['provisioner']['state-file']
     if File.exists? @state_file
       @state = YAML.load_file(@state_file)
     else
@@ -50,14 +51,14 @@ class VultrProvisioner
   end
 
   def provision(rebuild = false)
-    # reserve_ips
-    # populate_ips
-    # add_ssh_keys
-    # if rebuild
-    #   @log.info('Rebuilding Servers')
-    #   delete_servers
-    # end
-    # ensure_servers
+    reserve_ips
+    populate_ips
+    add_ssh_keys
+    if rebuild
+      @log.info('Rebuilding Servers')
+      delete_servers
+    end
+    ensure_servers
     update_dns
     cleanup_dns
     write_inventory
@@ -67,6 +68,17 @@ class VultrProvisioner
   end
 
   def write_inventory
+    ['public', 'private'].each { |inv_type|
+      inventory_file = @inventory_files[inv_type]
+      File.open(inventory_file, 'w') { |pub|
+        @log.info("Writing #{inv_type} inventory to #{inventory_file}")
+        @servers.each { |server, settings|
+          pub.write("[#{server}]\n")
+          pub.write(settings['dns'][inv_type].first)
+          pub.write("\n\n")
+        }
+      }
+    }
   end
 
   # Convert domian array (from YAML config) to a hash from each base domain to subdomains
@@ -207,6 +219,10 @@ class VultrProvisioner
     delete_servers.each { |server|
       @log.info("Deleting #{server}")
       v(Vultr::Server.destroy('SUBID' => @state['servers'][server]['SUBID']))
+      while not v(Vultr::RevervedIP.list).find { |k,v| v['label'] == server }.last['attached_SUBID']
+        @log.info("Waiting on Reserved IP to Detach from #{server}")
+        sleep(5)
+      end
     }
   end
 
