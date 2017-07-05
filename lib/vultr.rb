@@ -4,12 +4,14 @@ require 'logger'
 
 class VultrProvisioner
 
-  def initialize(config)
-    @log = Logger.new(STDOUT)
+  SSH_KEY_ID = 'b2-provisioner'
+
+  def initialize(config, log)
+    @log = log
     Vultr.api_key = config['provisioner']['token']
     @inventory_files = config['inventory']
     @servers = config['servers']
-    @ssh_key = File.read(config['provisioner']['ssh_key'])
+    @ssh_key = File.read(config['provisioner']['ssh_key']['public'])
 
     @DCID =  Vultr::Regions.list[:result].find { |id,region|
       region['regioncode'] == config['provisioner']['region']
@@ -51,9 +53,9 @@ class VultrProvisioner
   end
 
   def provision(rebuild = false)
+    ensure_ssh_keys
     reserve_ips
     populate_ips
-    add_ssh_keys
     if rebuild
       @log.info('Rebuilding Servers')
       delete_servers
@@ -92,19 +94,30 @@ class VultrProvisioner
   end
 
   private def dns_update_check(r)
-    vv(Vultr::DNS.create_record(r), 412, -> {
-        @log.info('Record Created')
-      },
-      ->{
-        current = v(Vultr::DNS.records({'domain' => r['domain']})).find { |r| r['name'] == r['name'] }
-        r['RECORDID'] = current['RECORDID']
-        vv(Vultr::DNS.update_record(r), 412,-> {
-          @log.info('Record Updated')
-        },
-        ->{
-         @log.info('Record Unchanged')
-        })
-    })
+    #
+    current = v(Vultr::DNS.records({'domain' => r['domain']})).find{ |c| c['type'] == r['type'] and c['name'] == r['name'] }
+    if current.nil?
+      Vultr::DNS.create_record(r)
+      @log.info('Record Created')
+    else
+      r['RECORDID'] = current['RECORDID']
+      Vultr::DNS.update_record(r)
+      @log.info('Record Updated')
+    end
+    #
+    # vv(Vultr::DNS.create_record(r), 412, -> {
+    #     @log.info('Record Created')
+    #   },
+    #   ->{
+    #     current = v(Vultr::DNS.records({'domain' => r['domain']})).find { |r| r['name'] == r['name'] }
+    #     r['RECORDID'] = current['RECORDID']
+    #     vv(Vultr::DNS.update_record(r), 412,-> {
+    #       @log.info('Record Updated')
+    #     },
+    #     ->{
+    #      @log.info('Record Unchanged')
+    #     })
+    # })
   end
 
   # Remove anything set to 127.0.0.1 and MX records
@@ -159,6 +172,7 @@ class VultrProvisioner
                 if ds_type == 'web'
                   ipv4 = @state['servers'][server]['ipv4']['addr']
                   ipv6 = @state['servers'][server]['ipv6']['addr']
+                  @log.debug("IP Map: #{server} -> #{ipv4}/#{ipv6}")
                   v(Vultr::DNS.create_domain({'domain' => domain, 'serverip' => ipv4 }))
                   dns_update_check({'domain' => domain, 'name' => '', 'type' => 'AAAA', 'data' => ipv6 })
                   create_subdomains(['www'], domain, config, ['ipv4', 'ipv6'])
@@ -181,8 +195,8 @@ class VultrProvisioner
        server_config = {'DCID' => @DCID, 'VPSPLANID' => @servers[server]['plan'], 'OSID' => @servers[server]['os'],
              'enable_private_network' => 'yes',
              'enable_ipv6' => 'yes',
-             'label' => server, 'SSHKEYID' => @state['ssh_key'],
-             'hostname' => server, 'reserved_ip_v4' => @state['servers'][server]['ipv4']['addr'] }
+             'label' => server, 'SSHKEYID' => @state['ssh_key_id'],
+             'hostname' => server, 'reserved_ip_v4' => @state['servers'][server]['ipv4']['subnet'] }
        @log.debug(server_config)
        subid = v(Vultr::Server.create(server_config))['SUBID']
        @state['servers'][server]['SUBID'] = subid
@@ -202,7 +216,7 @@ class VultrProvisioner
        save_state
 
        # Attach our Reserved /Public IPv6 Address
-       ip = @state['servers'][server]['ipv6']['addr']
+       ip = @state['servers'][server]['ipv6']['subnet']
        @log.info("Attaching #{ip} to #{server}")
        vv(Vultr::RevervedIP.attach({'ip_address' => ip, 'attach_SUBID' => subid}), 412, -> {
          @log.info('IP Attached')
@@ -210,6 +224,18 @@ class VultrProvisioner
          @log.warn('Unable to attach IP. Rebooting VM')
          v(Vultr::Server.reboot({'SUBID' => subid}))
        })
+
+       # We can only get the full IPv6 address after it's attached to a server
+       # IPv4 subnets are their IP addresses, so we'll set that here too
+       tst = v(Vultr::Server.list)
+       srv = tst.map { |subid, s| s }.select { |ss| ss['label'] == server }.first
+       srv_v6_net = @state['servers'][server]['ipv6']['subnet']
+       ipv6 = srv['v6_networks'].select { |net| net['v6_network'] == srv_v6_net }.first['v6_main_ip']
+       @state['servers'][server]['ipv6']['addr'] = ipv6
+       @state['servers'][server]['ipv4']['addr'] = srv['main_ip']
+       @log.info("Updating IPv6 for #{server} from net/#{srv_v6_net} to IP/#{ipv6}")
+       @log.info("Setting IPv4 for #{server} to #{srv['main_ip']}")
+       save_state
     }
   end
 
@@ -219,7 +245,7 @@ class VultrProvisioner
     delete_servers.each { |server|
       @log.info("Deleting #{server}")
       v(Vultr::Server.destroy('SUBID' => @state['servers'][server]['SUBID']))
-      while not v(Vultr::RevervedIP.list).find { |k,v| v['label'] == server }.last['attached_SUBID']
+      while v(Vultr::RevervedIP.list).find { |k,v| v['label'] == server }.last['attached_SUBID']
         @log.info("Waiting on Reserved IP to Detach from #{server}")
         sleep(5)
       end
@@ -257,12 +283,11 @@ class VultrProvisioner
     end
   end
 
-  def add_ssh_keys()
-    current_keys = v(Vultr::SSHKey.list)
-    my_key_name = @ssh_key.split(' ').last
-    if v(Vultr::SSHKey.list).reject { |id, ssh_key| ssh_key['name'] != my_key_name }.empty?
-      @state['ssh_key'] = v(Vultr::SSHKey.create({'name' => my_key_name, 'ssh_key' => @ssh_key}))['SSHKEYID']
-      @log.info("Added SSH Key #{my_key_name} (SSHKEYID:#{@state['ssh_key']})")
+  def ensure_ssh_keys
+    key_list = v(Vultr::SSHKey.list).find { |k,v| v['name'] == SSH_KEY_ID }
+    if key_list.nil? or not key_list.any?
+      @log.info("Adding SSH Key #{SSH_KEY_ID}")
+      @state['ssh_key_id'] = v(Vultr::SSHKey.create({'name' => SSH_KEY_ID, 'ssh_key' =>@ssh_key}))['SSHKEYID']
       save_state
     end
   end
@@ -288,10 +313,10 @@ class VultrProvisioner
     ip_list = v(Vultr::RevervedIP.list())
     ['ipv4', 'ipv6'].each { |ip_type|
       @servers.each { |s,v|
-        if @state['servers'][s][ip_type]['addr'].nil?
+        if @state['servers'][s][ip_type]['net'].nil?
           ip = ip_list.find { |x,y| x == @state['servers'][s][ip_type]['SUBID'].to_s }
-          @state['servers'][s][ip_type]['addr'] = ip.last['subnet']
-          @log.info("Server #{s} Assigned IP #{ip.last['subnet']}")
+          @state['servers'][s][ip_type]['subnet'] = ip.last['subnet']
+          @log.info("Server #{s} Assigned Subnet #{ip.last['subnet']}/#{ip.last['subnet_size']}")
         end
       }
     }
