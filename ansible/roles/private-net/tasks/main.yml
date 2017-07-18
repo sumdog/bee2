@@ -1,0 +1,11 @@
+---
+  - debug: msg={{servers[ansible_hostname]}}
+  - set_fact: private_ip="{{ servers[ansible_hostname].private_ip }}"
+  - block:
+      - set_fact: private_eth=ens7
+      - include: ubuntu.yml
+    when: ansible_distribution in [ 'Debian', 'Ubuntu' ]
+  - block:
+      - set_fact: private_eth=vtnet1
+      - include: freebsd.yml
+    when: ansible_distribution == 'FreeBSD'

@@ -1,0 +1,4 @@
+- name: restart netif
+  service: name=netif enabled=yes state=restarted
+- name: restart networking
+  service: name=networking  enabled=yes state=restarted

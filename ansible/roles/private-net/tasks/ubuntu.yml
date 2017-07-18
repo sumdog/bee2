@@ -1,0 +1,9 @@
+---
+  - blockinfile:
+      path: /etc/network/interfaces
+      block: |
+        auto {{ private_eth }}
+        iface {{ private_eth }} inet static
+          address {{ private_ip }}
+          netmask 255.255.255.0
+    notify: restart networking

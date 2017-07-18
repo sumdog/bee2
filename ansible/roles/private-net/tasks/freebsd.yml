@@ -1,0 +1,6 @@
+---
+  - name: Setup Private Network
+    lineinfile: >
+      dest=/etc/rc.conf state=present regexp='^ifconfig_{{ private_eth }}.*'
+      line='ifconfig_{{ private_eth }}="inet {{ private_ip }} netmask 255.255.255.0"'
+    notify: restart netif

@@ -104,20 +104,6 @@ class VultrProvisioner
       Vultr::DNS.update_record(r)
       @log.info('Record Updated')
     end
-    #
-    # vv(Vultr::DNS.create_record(r), 412, -> {
-    #     @log.info('Record Created')
-    #   },
-    #   ->{
-    #     current = v(Vultr::DNS.records({'domain' => r['domain']})).find { |r| r['name'] == r['name'] }
-    #     r['RECORDID'] = current['RECORDID']
-    #     vv(Vultr::DNS.update_record(r), 412,-> {
-    #       @log.info('Record Updated')
-    #     },
-    #     ->{
-    #      @log.info('Record Unchanged')
-    #     })
-    # })
   end
 
   # Remove anything set to 127.0.0.1 and MX records
@@ -144,7 +130,7 @@ class VultrProvisioner
          when 'ipv6'
             {'domain' => domain, 'name' => s, 'type' => 'AAAA', 'data' => server_config['ipv6']['addr'] }
          when 'private_ip'
-            {'domain' => domain, 'name' => s, 'type' => 'A', 'data' => server_config['private_ip']['addr'] }
+            {'domain' => domain, 'name' => s, 'type' => 'A', 'data' => @servers[s]['private_ip'] }
          when 'web'
             [{'domain' => domain, 'name' => "www.#{s}", 'type' => 'A', 'data' => server_config['ipv4']['addr'] },
             {'domain' => domain, 'name' => "www.#{s}", 'type' => 'AAAA', 'data' => server_config['ipv6']['addr'] }]
@@ -206,14 +192,14 @@ class VultrProvisioner
        wait_server(server, 'server_state', 'ok')
 
        # Save auto-generated private IP addresses
-       v(Vultr::Server.list).each { |k,v|
-         if v['label'] == server
-           @state['servers'][server]['private_ip'] = {}
-           @state['servers'][server]['private_ip']['addr'] = v['internal_ip']
-           @log.info("#{server}'s private IP is #{v['internal_ip']}'")
-         end
-       }
-       save_state
+      #  v(Vultr::Server.list).each { |k,v|
+      #    if v['label'] == server
+      #      @state['servers'][server]['private_ip'] = {}
+      #      @state['servers'][server]['private_ip']['addr'] = v['internal_ip']
+      #      @log.info("#{server}'s private IP is #{v['internal_ip']}'")
+      #    end
+      #  }
+      #  save_state
 
        # Attach our Reserved /Public IPv6 Address
        ip = @state['servers'][server]['ipv6']['subnet']
