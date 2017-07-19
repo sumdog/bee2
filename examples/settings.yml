@@ -1,0 +1,35 @@
+provisioner:
+  type: vultr
+  token: InsertValidAPIKeyHere
+  region: LAX
+  state-file: vultr-state.yml
+  ssh_key:
+    public: vultr-key.pub
+    private: vultr-key
+inventory:
+  public: vultr.pub.inv
+  private: vultr.pri.inv
+servers:
+  web1:
+    plan: 202 # 2048 MB RAM,40 GB SSD,2.00 TB BW
+    os: 241 # Ubuntu 17.04 x64
+    private_ip: 192.168.150.10
+    dns:
+      public:
+        - web1.example.com
+      private:
+        - web1.example.net
+      web:
+        - penguindreams.org
+        - khanism.org
+    playbook: ubuntu-playbook.yml
+  vpn:
+    plan: 201 # 1024 MB RAM,25 GB SSD,1.00 TB BW
+    os: 230 # FreeBSD 11 x64
+    private_ip: 192.168.150.20
+    dns:
+      public:
+        - vpn.example.com
+      private:
+        - vpn.example.net
+    playbook: freebsd-playbook.yml

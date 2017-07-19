@@ -38,7 +38,7 @@ servers:
       web:
         - penguindreams.org
         - khanism.org
-    playbook: ubuntu-example.yml
+    playbook: ubuntu-playbook.yml
   vpn:
     plan: 201 # 1024 MB RAM,25 GB SSD,1.00 TB BW
     os: 230 # FreeBSD 11 x64
@@ -48,7 +48,7 @@ servers:
         - vpn.example.com
       private:
         - vpn.example.net
-    playbook: freebsd-example.yml
+    playbook: freebsd-playbook.yml
 ```
 
 Sample configuration can be found in the `examples` folder. The two example Ansible playbooks should be placed in the root of the `ansible` folder.
