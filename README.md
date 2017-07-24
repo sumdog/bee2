@@ -8,7 +8,6 @@ You can learn more about Bee2 from [my blog post on PenguinDreams](http://pengui
 
 Installation
 ============
-    gem install --user vultr
     git clone https://github.com/sumdog/bee2
 
 Configuration
