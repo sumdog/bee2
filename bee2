@@ -49,6 +49,11 @@ rescue *[OptionParser::InvalidOption,OptionParser::InvalidArgument,OptionParser:
   exit 1
 end
 
+if options[:config].nil?
+  log.fatal('You must specify a config file (-c). Use -h for usage.')
+  exit 1
+end
+
 config = YAML.load_file(options[:config])
 case config['provisioner']['type']
 when 'vultr'
