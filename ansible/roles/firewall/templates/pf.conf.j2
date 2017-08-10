@@ -1,0 +1,9 @@
+# {{ ansible_managed }}
+block all
+set skip on lo0
+set skip on tun0
+pass out all keep state
+tcp_services = "{ ssh }"
+udp_services = "{ openvpn }"
+pass in proto tcp to any port $tcp_services keep state
+pass in proto udp to any port $udp_services keep state

@@ -1,0 +1,14 @@
+---
+  - name: Install Docker
+    action: apt name=docker.io
+
+  - name: Disable Local Socket Access for Docker
+    lineinfile:
+      dest: /lib/systemd/system/docker.service
+      regexp: '^ExecStart=.*\$DOCKER_OPTS'
+      line: "ExecStart=/usr/bin/dockerd $DOCKER_OPTS"
+    register: systemd_target_update
+
+  - name: Reload Systemd targets
+    command: systemctl daemon-reload
+    when: systemd_target_update.changed

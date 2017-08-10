@@ -1,0 +1,9 @@
+---
+  - pkgng: name=docker-freebsd,ca_root_nss state=present
+  - command: dd if=/dev/zero of=/usr/local/dockerfs bs=1024K count=4000
+    args:
+      creates: /usr/local/dockerfs
+  - command: zpool create -f dockerfs /usr/local/dockerfs
+    run_once: true
+  - command: zfs create -o mountpoint=/usr/docker dockerfs/docker
+    run_once: true

@@ -1,4 +1,4 @@
 - name: restart netif
-  service: name=netif enabled=yes state=restarted
+  service: name=netif enabled=yes state=restarted args={{ private_eth }}
 - name: restart networking
   service: name=networking  enabled=yes state=restarted

@@ -1,0 +1,18 @@
+---
+  - name: Enable ufw
+    ufw: state=enabled policy=allow
+
+  - name: Disable default in
+    ufw: direction=incoming policy=deny
+
+  - name: Allow ssh internally
+    ufw: rule=allow port=22 direction=in proto=tcp interface={{ private_eth }}
+
+  - name: Allow Docker internally
+    ufw: rule=allow port=2376 direction=in proto=tcp interface={{ private_eth }}
+
+  - name: 80 is open
+    ufw: rule=allow port=80 proto=tcp
+
+  - name: 443 is open
+    ufw: rule=allow port=443 proto=tcp

@@ -6,4 +6,5 @@
         iface {{ private_eth }} inet static
           address {{ private_ip }}
           netmask 255.255.255.0
+        up route add -net {{ openvpn.server.subnet }}/24 gw {{ openvpn.hosts.gateway }} dev {{ private_eth }}
     notify: restart networking

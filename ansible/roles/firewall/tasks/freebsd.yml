@@ -1,0 +1,14 @@
+---
+  - name: Copy Firewall Configuration
+    template:
+      src: pf.conf.j2
+      dest: /etc/pf.conf
+      validate: 'pfctl -n -f %s'
+    notify: reload pf
+  - name: Enable Firewall Service
+    service: name=pf state=started enabled=yes
+    # perform this without waiting for the response because PF will drop the
+    # SSH connection if its service is not running
+    async: 1
+    poll: 0
+    ignore_errors: true

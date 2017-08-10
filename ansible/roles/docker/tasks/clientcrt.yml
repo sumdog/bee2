@@ -1,0 +1,27 @@
+  - name: Create Docker Client Certificate Signing Request
+    command: openssl req -subj '/CN=client' -new -key {{ client_key }} -out {{ client_csr }}
+    args:
+      creates: "{{ client_csr }}"
+
+  - name: Create Client Configuration
+    shell: echo extendedKeyUsage = clientAuth > {{ client_ext_file }}
+    args:
+      creates: "{{ client_ext_file }}"
+  - name: Sign Client Key
+    command: openssl x509 -req -days 365 -sha256 -in {{ client_csr }} -CA {{ docker_ca }} -CAkey {{ docker_ca_key }} -CAcreateserial -out {{ client_crt }} -extfile {{ client_ext_file }}
+
+  - name: Copy Client Cert Locally
+    fetch:
+      src: "{{ client_crt }}"
+      dest: "{{ local_client_crt }}"
+      flat: yes
+  - file: path={{ client_key }} owner=root group=root mode=0600
+
+  - name: Copy Client Key Locally
+    fetch:
+      src: "{{ client_key }}"
+      dest: "{{ local_client_key }}"
+      flat: yes
+
+  - name: Set Client Key Permissions
+    file: path={{ client_key }} owner=root group=root mode=0600

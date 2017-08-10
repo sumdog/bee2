@@ -1,0 +1,7 @@
+- name: reload pf
+  service: name=pf state=reloaded enabled=yes
+  # perform this without waiting for the response because PF will drop the
+  # SSH connection if its service is not running
+  async: 1
+  poll: 0
+  ignore_errors: true

@@ -1,0 +1,42 @@
+  - name: Create Docker CA Private Key
+    command: openssl genrsa -out {{ docker_ca_key }} 4096
+    args:
+      creates: "{{ docker_ca_key }}"
+
+  - name: Create Docker CA Public Key
+    command: openssl req -new -x509 -days 365 -key {{ docker_ca_key }} -sha256 -out  {{ docker_ca }} -subj "/CN=docker-ca"
+    args:
+      creates: "{{ docker_ca }}"
+
+  - name: Copy Docker CA Locally
+    fetch:
+      src: "{{ docker_ca }}"
+      dest: "{{ local_ca }}"
+      flat: yes
+
+  - name: Create Docker Server Certificate
+    command: openssl genrsa -out {{ server_key }} 4096
+    args:
+      creates: "{{ server_key }}"
+
+  - name: Generate Docker Certificate Signing Request
+    command: openssl req -subj "/CN={{ docker_host }}" -sha256 -new -key {{ server_key }} -out {{ server_csr }}
+    args:
+      creates: "{{ server_csr }}"
+
+  - name: Alternative DNS/IP Addresses Configuration
+    template: src=extfile.cnf.j2 dest={{ ext_file }} owner=root group=root mode=0600
+
+  - name: Sign Docker Server Key
+    command: openssl x509 -req -days 365 -sha256 -in {{ server_csr }} -CA {{ docker_ca }} -CAkey {{ docker_ca_key }} -CAcreateserial -out {{ server_crt }} -extfile {{ ext_file }}
+    args:
+      creates: "{{ server_crt }}"
+
+  - name: Configure Docker to use json Configuration
+    template: src=docker.j2 dest=/etc/default/docker
+
+  - name: Configure Docker Daemon json
+    template: src=daemon.json.j2 dest={{ docker_daemon_conf }}
+    notify: reload docker
+  - file: path={{ docker_ca_key }} owner=root group=root mode=0600
+  - file: path={{ server_key }} owner=root group=root mode=0600

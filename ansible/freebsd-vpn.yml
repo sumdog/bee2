@@ -1,0 +1,10 @@
+---
+- hosts: all
+  vars_files:
+    - ../{{ config_file }}
+  vars:
+    - ansible_python_interpreter: /usr/local/bin/python
+  roles:
+    - private-net
+    - vpn
+    #- firewall

@@ -1,0 +1,95 @@
+---
+- set_fact: private_ip="{{ servers[ansible_hostname].private_ip }}"
+
+- name: Install OpenVPN (FreeBSD)
+  pkgng: name=openvpn state=present
+
+- name: Install easy-rsa
+  pkgng: name=easy-rsa state=present
+
+- name: Create Configuration Directory
+  file: path={{ openvpn_etc }} state=directory
+
+- name: Copy Default OpenSSL Configuration
+  copy: remote_src=True src=/usr/local/share/easy-rsa/openssl-1.0.cnf.example dest={{ openvpn_etc }}/openssl-1.0.cnf
+
+- name: Symbolic Link x509 Types
+  file:
+    src: /usr/local/share/easy-rsa/x509-types
+    dest: "{{ openvpn_etc }}/x509-types"
+    state: link
+
+- name: Initalize PKI
+  command: easyrsa init-pki
+  environment:
+    EASYRSA: "{{ openvpn_etc }}"
+  args:
+    creates: "{{ openvpn_pki }}/private"
+
+- name: Create CA
+  command: easyrsa build-ca nopass
+  environment:
+    EASYRSA_BATCH: true
+    EASYRSA_REQ_CN: "bee2"
+    EASYRSA: "{{ openvpn_etc }}"
+  args:
+    creates: "{{ openvpn_pki }}/private/ca.key"
+
+- name: Create DH
+  command: easyrsa gen-dh
+  environment:
+    EASYRSA: "{{ openvpn_etc }}"
+  args:
+    creates: "{{ openvpn_pki }}/dh.pem"
+
+- name: Create Server Key
+  command: easyrsa build-server-full {{ openvpn_host }} nopass
+  environment:
+    EASYRSA: "{{ openvpn_etc }}"
+    EASYRSA_BATCH: true
+  args:
+    creates: "{{ openvpn_pki }}/private/{{ openvpn_host }}.key"
+
+- name: Create Client Keys
+  command: easyrsa build-client-full {{ item.key }} nopass
+  environment:
+    EASYRSA: "{{ openvpn_etc }}"
+    EASYRSA_BATCH: true
+  with_dict: "{{ openvpn.clients }}"
+  args:
+    creates: "{{ openvpn_pki }}/private/{{ item.key }}.key"
+
+- name: Copy Client Keys
+  fetch:
+    src: "{{ openvpn_pki }}/private/{{ item.key }}.key"
+    dest: "{{ local_openvpn_client_keys }}"
+    flat: yes
+  with_dict: "{{ openvpn.clients }}"
+
+- name: Copy Client Certs
+  fetch:
+    src: "{{ openvpn_pki }}/issued/{{ item.key }}.crt"
+    dest: "{{ local_openvpn_client_keys }}"
+    flat: yes
+  with_dict: "{{ openvpn.clients }}"
+
+- name: Copy CA Cert
+  fetch:
+    src: "{{ openvpn_pki }}/ca.crt"
+    dest: "{{ local_openvpn_client_keys }}"
+    flat: yes
+
+- name: Configure OpenVPN Service
+  template: src=server.conf.j2 dest={{ openvpn_server_conf }}
+  notify: reload openvpn
+
+- name: Enable IP Forwarding on Reboots
+  lineinfile:
+    path: /etc/rc.conf
+    line: gateway_enable="YES"
+
+- name: Enable IP Forwarding Now
+  command: sysctl net.inet.ip.forwarding=1
+
+- name: Enable OpenVPN Service
+  service: name=openvpn enabled=yes state=started

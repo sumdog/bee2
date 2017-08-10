@@ -1,0 +1,21 @@
+port 1194
+proto udp
+dev tun
+ca {{ openvpn_pki }}/ca.crt
+cert {{ openvpn_pki }}/issued/{{ openvpn_host }}.crt
+key {{ openvpn_pki }}/private/{{ openvpn_host }}.key
+dh {{ openvpn_pki }}/dh.pem
+server {{ openvpn.server.subnet }} {{ openvpn.server.netmask }}
+ifconfig-pool-persist {{ openvpn_etc}}/ipp.txt
+keepalive 10 120
+cipher {{ openvpn.server.cipher }}
+{% for route in openvpn_routes %}
+route {{ route }}
+push "route {{ route }}"
+{% endfor %}
+compress lz4-v2
+push "compress lz4-v2"
+persist-key
+persist-tun
+status /tmp/openvpn-status.log
+log-append /var/log/openvpn.log

@@ -6,6 +6,7 @@ require 'logger'
 require_relative 'lib/vultr'
 
 log = Logger.new(STDOUT)
+log.level = Logger::INFO
 
 options = {}
 opts = OptionParser.new do |opts|
@@ -23,8 +24,6 @@ opts = OptionParser.new do |opts|
   opts.on('-v', '--verbose', 'Debug Logging Output Enabled') do |verbose|
     if verbose
       log.level = Logger::DEBUG
-    else
-      log.level = Logger::INFO
     end
   end
 
@@ -35,6 +34,8 @@ opts = OptionParser.new do |opts|
   opts.on('-a', '--ansible INVENTORY', [:public, :private], 'Run Ansible on Inventory (public|private)') do |ansible|
     options[:inventory] = ansible
   end
+
+  #opts.on('-s', '--servers SERVERS', '')
 
   opts.on_tail("-h", "--help", "Show this message") do
     STDERR.puts opts
@@ -68,9 +69,18 @@ end
 
 if options[:inventory]
   inv_file = config['inventory'][options[:inventory].to_s]
+
+  # Format: filename:server, e.g public:web, or just filename (public/private)
+  # inv = config['inventory'][options[:inventory].to_s].partition(':')
+  # inv_file = inv.first
+  # hosts = inv.last
+
   playbooks = config['servers'].flat_map { |server, info| {server => info['playbook']} }.inject(:update)
   log.info("Running Ansible (Inventory: #{options[:inventory]} :: #{inv_file})")
   playbooks.each { |server, playbook|
+    # if not hosts.empty? and not hosts.split(',').include?(server)
+    #   next
+    # end
     log.info("Applying #{playbook} to #{server}")
     cmd = ['ansible-playbook', '--limit', server, '--key-file', config['provisioner']['ssh_key']['private'],
            '-u', 'root', '-e', "config_file=#{options[:config].to_s}", '-i', inv_file, "ansible/#{playbook}"]
