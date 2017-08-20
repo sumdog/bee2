@@ -1,10 +1,15 @@
 ---
   - set_fact: private_ip="{{ servers[ansible_hostname].private_ip }}"
+
   - include: ubuntu.yml
     when: ansible_distribution in [ 'Debian', 'Ubuntu' ]
+
   - include: freebsd.yml
     when: ansible_distribution == 'FreeBSD'
-  - service: name=docker enabled=yes state=started
+
+  - name: Enable and Start Docker
+    service: name=docker enabled=yes state=started
+
   - name: Create Docker Client Key
     command: openssl genrsa -out {{ client_key }} 4096
     args:
