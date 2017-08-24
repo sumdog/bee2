@@ -7,4 +7,4 @@
   roles:
     - private-net
     - vpn
-    #- firewall
+    - firewall
