@@ -1,10 +1,15 @@
 ---
-  - set_fact: private_ip="{{ servers[ansible_hostname].private_ip }}"
-  - block:
+  - name: Setting Private IP Fact
+    set_fact: private_ip="{{ servers[ansible_hostname].private_ip }}"
+
+  - name: Ubuntu Private Networking
+    block:
       - set_fact: private_eth=ens7
       - include: ubuntu.yml
     when: ansible_distribution in [ 'Debian', 'Ubuntu' ]
-  - block:
+
+  - name: FreeBSD Private Networking
+    block:
       - set_fact: private_eth=vtnet1
       - include: freebsd.yml
     when: ansible_distribution == 'FreeBSD'

@@ -1,15 +1,17 @@
 # {{ ansible_managed }}
-block all
 
-# allow all from private, loopback and openvpn
-set skip on vtnet1
-set skip on lo0
-set skip on tun0
+block all
 
 # allow all from host itself
 pass out inet all keep state
 pass out inet6 all keep state
 
-# services
-pass in proto tcp to vtnet0 port ssh flags S/SA keep state
-pass in proto udp to vtnet0 port openvpn keep state
+# allow all from private
+pass in quick on vtnet1 inet from any to any keep state
+
+# openvpn
+pass in quick proto udp to vtnet0 port openvpn keep state
+pass in quick on tun0 inet from any to any keep state
+
+# ssh
+pass in quick proto tcp to vtnet0 port ssh flags S/SA keep state
