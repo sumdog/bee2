@@ -1,0 +1,3 @@
+---
+pgp_password_path: "{{ lookup('env','HOME') }}/.password-store/bee2"
+pgp_password_file: "{{ pgp_password_path }}/{{ server_name }}.gpg"

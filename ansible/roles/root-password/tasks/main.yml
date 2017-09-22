@@ -1,0 +1,3 @@
+---
+- include: enable-password.yml
+  when: security.pgp_id is defined
