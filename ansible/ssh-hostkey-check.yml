@@ -1,0 +1,28 @@
+# Taken from https://serverfault.com/a/816621/92872
+---
+- name: accept ssh fingerprint automatically for the first time
+  hosts: all
+  connection: local
+  gather_facts: False
+
+  tasks:
+    - name: Check if known_hosts contains server's fingerprint
+      command: ssh-keygen -F {{ inventory_hostname }}
+      register: keygen
+      failed_when: keygen.stderr != ''
+      changed_when: False
+
+    - name: Fetch remote SSH key
+      command: ssh-keyscan -T5 {{ inventory_hostname }}
+      register: keyscan
+      failed_when: keyscan.rc != 0 or keyscan.stdout == ''
+      changed_when: False
+      when: keygen.rc == 1
+
+    - name: Add ssh-key to local known_hosts
+      lineinfile:
+        name: ~/.ssh/known_hosts
+        create: yes
+        line: "{{ item }}"
+      when: keygen.rc == 1
+      with_items: '{{ keyscan.stdout_lines|default([]) }}'

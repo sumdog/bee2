@@ -83,7 +83,8 @@ if options[:inventory]
     # end
     log.info("Applying #{playbook} to #{server}")
     cmd = ['ansible-playbook', '--limit', server, '--key-file', config['provisioner']['ssh_key']['private'],
-           '-u', 'root', '-e', "config_file=#{options[:config].to_s}", '-i', inv_file, "ansible/#{playbook}"]
+           '-u', 'root', '-e', "config_file=#{options[:config].to_s}", '-i', inv_file,
+           "ansible/ssh-hostkey-check.yml", "ansible/#{playbook}"]
     log.debug(cmd)
     Process.fork do
       exec(*cmd)
