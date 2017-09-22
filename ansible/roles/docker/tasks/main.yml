@@ -1,13 +1,24 @@
 ---
-  - set_fact: private_ip="{{ servers[ansible_hostname].private_ip }}"
-  - include: ubuntu.yml
+  - name: Setting Private IP Fact
+    set_fact: private_ip="{{ servers[ansible_hostname].private_ip }}"
+
+  - name: Ubuntu Docker Tasks
+    include: ubuntu.yml
     when: ansible_distribution in [ 'Debian', 'Ubuntu' ]
-  - include: freebsd.yml
+
+  - name: FreeBSD Docker Tasks
+    include: freebsd.yml
     when: ansible_distribution == 'FreeBSD'
-  - service: name=docker enabled=yes state=started
+
+  - name: Enable/Start Docker Service
+    service: name=docker enabled=yes state=started
+
   - name: Create Docker Client Key
     command: openssl genrsa -out {{ client_key }} 4096
     args:
       creates: "{{ client_key }}"
   - include: servertls.yml
   - include: clientcrt.yml
+
+  # Docker needs to be setup before Firewall handlers run
+  - meta: flush_handlers
