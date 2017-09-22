@@ -101,6 +101,7 @@ class VultrProvisioner
         @servers.each { |server, settings|
           pub.write("[#{server}]\n")
           pub.write(settings['dns'][inv_type].first)
+          pub.write(" server_name=#{server}")
           pub.write("\n\n")
         }
       }
@@ -238,10 +239,29 @@ class VultrProvisioner
     }
   end
 
+  private def remove_ssh_key(host_or_ip)
+    @log.info("Removing SSH Key for #{host_or_ip}")
+    Process.fork do
+      exec('ssh-keygen', '-R', host_or_ip)
+    end
+    Process.wait
+  end
+
   private def delete_server(server)
     @log.info("Deleting #{server}")
     request('POST', 'server/destroy', {'SUBID' => @state['servers'][server]['SUBID']}, -> {
       @log.info("Server #{server} Deleted")
+
+      # SSH Key Cleanup (DNS, private IP, public IPv4/v6)
+      ['public', 'private'].each { |dns_type|
+        @servers[server]['dns'][dns_type].each { |hostname|
+          remove_ssh_key(hostname)
+        }
+      }
+      remove_ssh_key(@servers[server]['private_ip'])
+      ['ipv4', 'ipv6'].each { |ip_type|
+        remove_ssh_key(@state['servers'][server][ip_type]['addr'])
+      }
     }, 412, -> {
       @log.warn("Unable to destory server. Servers cannot be destoryed within 5 minutes of creation")
       @log.warn("Waiting 15 Seconds")
