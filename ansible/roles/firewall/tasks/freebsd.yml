@@ -9,6 +9,6 @@
     service: name=pf state=started enabled=yes
     # perform this without waiting for the response because PF will drop the
     # SSH connection if its service is not running
-    async: 1
-    poll: 0
+    async: 0
+    poll: 10
     ignore_errors: true
