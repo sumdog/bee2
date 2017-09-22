@@ -3,8 +3,9 @@
   vars_files:
     - ../{{ config_file }}
   vars:
-    - ansible_python_interpreter: /usr/local/bin/python
+    - ansible_python_interpreter: /usr/bin/env python
   roles:
+    - root-password
     - private-net
     - vpn
     - firewall

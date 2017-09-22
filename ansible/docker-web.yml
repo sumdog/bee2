@@ -5,6 +5,7 @@
   vars_files:
     - ../{{ config_file }}
   roles:
+   - root-password
    - private-net
-   - firewall
    - docker
+   - firewall
