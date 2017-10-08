@@ -37,6 +37,6 @@
 
   - name: Configure Docker Daemon json
     template: src=daemon.json.j2 dest={{ docker_daemon_conf }}
-    notify: reload docker
+    notify: restart docker
   - file: path={{ docker_ca_key }} owner=root group=root mode=0600
   - file: path={{ server_key }} owner=root group=root mode=0600

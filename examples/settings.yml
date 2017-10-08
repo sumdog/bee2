@@ -33,3 +33,16 @@ servers:
       private:
         - vpn.example.net
     playbook: freebsd-playbook.yml
+openvpn:
+    hosts:
+      gateway: 192.168.150.20
+    server:
+      subnet: 10.10.12.0
+      routes:
+        - 192.168.150.0 255.255.255.0
+      netmask: 255.255.255.0
+      cipher: AES-256-CBC
+    clients:
+      laptop: type: host
+security:
+    pgp_id: 1ACBD3G

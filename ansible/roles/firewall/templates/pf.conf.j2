@@ -7,7 +7,7 @@ pass out inet all keep state
 pass out inet6 all keep state
 
 # allow all from private
-pass in quick on vtnet1 inet from any to any keep state
+pass in quick on {{ private_eth }} inet from any to any keep state
 
 # openvpn
 pass in quick proto udp to vtnet0 port openvpn keep state

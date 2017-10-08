@@ -3,3 +3,4 @@
     when: ansible_distribution in [ 'Debian', 'Ubuntu' ]
   - include: freebsd.yml
     when: ansible_distribution == 'FreeBSD'
+  - meta: flush_handlers

@@ -93,3 +93,5 @@
 
 - name: Enable OpenVPN Service
   service: name=openvpn enabled=yes state=started
+
+- meta: flush_handlers
