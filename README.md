@@ -7,7 +7,7 @@ Documentation
 You can learn more about Bee2 from the following posts:
 
   *[Bee2: Wrestling with the Vultr API](http://penguindreams.org/blog/bee2-wrestling-with-the-vultr-api/)
-  *[Bee2: Creating a Docker and VPN system for personal projects](http://penguindreams.org/blog/bee2-creating-a-docker-and-vpn-system-for-personal-projects/)
+  *[Bee2: Creating a Small Infrastructure for Docker Apps](http://penguindreams.org/blog/bee2-creating-a-small-infrastructure-for-docker-apps/)
 
 Installation
 ============
