@@ -4,6 +4,7 @@ require 'yaml'
 require 'optparse'
 require 'logger'
 require_relative 'lib/vultr'
+require_relative 'lib/docker'
 
 log = Logger.new(STDOUT)
 log.level = Logger::INFO
@@ -19,6 +20,10 @@ opts = OptionParser.new do |opts|
 
   opts.on('-p', '--provision', 'Provision Servers') do |provision|
     options[:provision] = provision
+  end
+
+  opts.on('-d', '--docker', 'Run Docker Service') do |docker|
+    options[:docker] = docker
   end
 
   opts.on('-v', '--verbose', 'Debug Logging Output Enabled') do |verbose|
@@ -91,4 +96,8 @@ if options[:inventory]
     end
     Process.wait
   }
+end
+
+if options[:docker]
+  docker = DockerHandler.new(config, log)
 end
