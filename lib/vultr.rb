@@ -120,13 +120,14 @@ class VultrProvisioner
 
   private def dns_update_check(r)
     current = request('GET', 'dns/records', {'domain' => r['domain']}).find{ |c| c['type'] == r['type'] and c['name'] == r['name'] }
+    msg = "Domain: #{r['domain']}, Name: #{r['name']}, Type: #{r['type']}"
     if current.nil?
       request('POST', 'dns/create_record', r)
-      @log.info('Record Created')
+      @log.info("Record Created :: #{msg}")
     else
       r['RECORDID'] = current['RECORDID']
       request('POST', 'dns/update_record', r)
-      @log.info('Record Updated')
+      @log.info("Record Updated :: #{msg}")
     end
   end
 
@@ -170,18 +171,20 @@ class VultrProvisioner
     current_dns = request('GET', 'dns/list')
     @state['servers'].each { |server, config|
       dns_sets = {"public"=>["ipv4", "ipv6"], "private"=>["private_ip"], "web"=>["ipv4", "ipv6", "web"]}
+      ipv4 = @state['servers'][server]['ipv4']['addr']
+      ipv6 = @state['servers'][server]['ipv6']['addr']
       dns_sets.each { |ds_type, typ_cfg|
         records = @servers[server]['dns'][ds_type]
         if not records.nil?
           domain_records(records).each { |domain, subdomains|
             request('GET', 'dns/records', {'domain' => domain}, -> {
               @log.info("Domain #{domain} exists")
+              dns_update_check({'domain' => domain, 'name' => '', 'type' => 'A', 'data' => ipv4 })
+              dns_update_check({'domain' => domain, 'name' => '', 'type' => 'AAAA', 'data' => ipv6 })
               create_subdomains(subdomains, domain, config, typ_cfg)
             }, 412, -> {
               @log.info("No records for #{domain}. Creating Base Record.")
               if ds_type == 'web'
-                ipv4 = @state['servers'][server]['ipv4']['addr']
-                ipv6 = @state['servers'][server]['ipv6']['addr']
                 @log.debug("IP Map: #{server} -> #{ipv4}/#{ipv6}")
                 request('POST', 'dns/create_domain', {'domain' => domain, 'serverip' => ipv4 })
                 dns_update_check({'domain' => domain, 'name' => '', 'type' => 'AAAA', 'data' => ipv6 })
