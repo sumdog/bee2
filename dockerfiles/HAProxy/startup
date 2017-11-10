@@ -1,0 +1,7 @@
+#!/bin/sh
+
+echo "Running HAProxy Config"
+python /haproxy-config.py
+
+echo "Running Base Wrapper Script"
+exec /docker-entrypoint.sh "$@"

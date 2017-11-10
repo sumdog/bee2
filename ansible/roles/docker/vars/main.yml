@@ -11,6 +11,6 @@ client_key: /etc/docker/client-key.pem
 client_csr: /etc/docker/client.csr
 client_crt: /etc/docker/client.crt
 client_ext_file: /etc/docker/client-extfile.cnf
-local_client_crt: ../conf/docker/docker-client.crt
-local_client_key: ../conf/docker/docker-client.pem
-local_ca: ../conf/docker/ca.crt
+local_client_crt: "../conf/docker/{{ ansible_hostname }}/docker-client.crt"
+local_client_key: "../conf/docker/{{ ansible_hostname }}/docker-client.pem"
+local_ca: "../conf/docker/{{ ansible_hostname }}/ca.crt"

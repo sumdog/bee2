@@ -4,5 +4,5 @@
 	"tlscacert": "{{ docker_ca }}",
 	"tlscert": "{{ server_crt }}",
 	"tlskey": "{{ server_key }}",
-	"hosts": ["127.0.0.1:2376", "{{ private_ip }}:2376"]
+	"hosts": ["127.0.0.1:2376", "{{ private_ip }}:2376", "fd://"]
 }

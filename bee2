@@ -7,12 +7,11 @@ require_relative 'lib/vultr'
 require_relative 'lib/docker'
 
 log = Logger.new(STDOUT)
-log.level = Logger::INFO
 
 options = {}
 opts = OptionParser.new do |opts|
 
-  opts.banner = 'Usage: bee2 [-v] [-h|--help] [-c <config>] [-p [-r]]'
+  opts.banner = 'Usage: bee2 [-v] [-h|--help] [-c <config>] [-p [-r]] [-d]'
 
   opts.on('-c','--config CONFIG','Configuration File') do |config|
     options[:config] = config
@@ -22,7 +21,7 @@ opts = OptionParser.new do |opts|
     options[:provision] = provision
   end
 
-  opts.on('-d', '--docker', 'Run Docker Service') do |docker|
+  opts.on('-d', '--docker COMMAND', 'Docker Command (use command \'help\' for more information)') do |docker|
     options[:docker] = docker
   end
 
@@ -66,6 +65,7 @@ when 'vultr'
   p = VultrProvisioner.new(config, log)
 when 'digitalocean'
   @log.warn('Not Implemented')
+  abort("Digital Ocean Not Implemented")
 end
 
 if options[:provision]
@@ -99,5 +99,5 @@ if options[:inventory]
 end
 
 if options[:docker]
-  docker = DockerHandler.new(config, log)
+  docker = DockerHandler.new(config, log, options[:docker])
 end
