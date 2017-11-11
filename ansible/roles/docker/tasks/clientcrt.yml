@@ -7,8 +7,11 @@
     shell: echo extendedKeyUsage = clientAuth > {{ client_ext_file }}
     args:
       creates: "{{ client_ext_file }}"
+
   - name: Sign Client Key
     command: openssl x509 -req -days 365 -sha256 -in {{ client_csr }} -CA {{ docker_ca }} -CAkey {{ docker_ca_key }} -CAcreateserial -out {{ client_crt }} -extfile {{ client_ext_file }}
+    args:
+      creates: "{{ client_crt }}"
 
   - name: Copy Client Cert Locally
     fetch:
