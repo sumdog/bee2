@@ -5,13 +5,13 @@
   - name: Ubuntu Private Networking
     block:
       - set_fact: private_eth=ens7
-      - include: ubuntu.yml
+      - include_tasks: ubuntu.yml
     when: ansible_distribution in [ 'Debian', 'Ubuntu' ]
 
   - name: FreeBSD Private Networking
     block:
       - set_fact: private_eth=vtnet1
-      - include: freebsd.yml
+      - include_tasks: freebsd.yml
     when: ansible_distribution == 'FreeBSD'
 
   # Private network needs to be setup before Firewall handlers run

@@ -1,6 +1,6 @@
 ---
-  - include: ubuntu.yml
+  - include_tasks: ubuntu.yml
     when: ansible_distribution in [ 'Debian', 'Ubuntu' ]
-  - include: freebsd.yml
+  - include_tasks: freebsd.yml
     when: ansible_distribution == 'FreeBSD'
   - meta: flush_handlers

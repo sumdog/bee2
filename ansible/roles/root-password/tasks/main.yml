@@ -1,3 +1,3 @@
 ---
-- include: enable-password.yml
+- include_tasks: enable-password.yml
   when: security.pgp_id is defined
