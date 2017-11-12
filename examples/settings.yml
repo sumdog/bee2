@@ -2,7 +2,7 @@ provisioner:
   type: vultr
   token: InsertValidAPIKeyHere
   region: LAX
-  state-file: vultr-state.yml
+  state_file: vultr-state.yml
   ssh_key:
     public: vultr-key.pub
     private: vultr-key
@@ -46,3 +46,54 @@ openvpn:
       laptop: type: host
 security:
     pgp_id: 1ACBD3G
+docker:
+  prefix: bee2
+  backup:
+    web1:
+      storage_dir: /media/backups
+      volumes:
+        - letsencrypt
+        - logs-web
+jobs:
+  dyject:
+    server: web1
+    git: git@github.com:/sumdog/dyject_web.git
+    volumes:
+      - dyject-web:/dyject/build:rw
+applications:
+  certbot:
+    server: web1
+    build_dir: CertBot
+    volumes:
+      - letsencrypt:/etc/letsencrypt:rw
+      - /var/run/docker.sock:/var/run/docker.sock
+    env:
+      email: blackhole@example.com
+      test: false
+      domains: all
+      port: 8080
+      haproxy_container: $haproxy
+  nginx-static:
+    server: web1
+    build_dir: NginxStatic
+    env:
+      domains:
+        - dyject.com
+      http_port: 8080
+    volumes:
+      - dyject-web:/www/dyject.com:ro
+      - logs-web:/var/log/nginx:rw
+  haproxy:
+    server: web1
+    build_dir: HAProxy
+    env:
+      domains: all
+      certbot_container: $certbot
+    link:
+      - nginx-static
+      - certbot
+    volumes:
+      - letsencrypt:/etc/letsencrypt:rw
+    ports:
+      - 80
+      - 443

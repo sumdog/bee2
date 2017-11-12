@@ -178,6 +178,14 @@ Usage: bee2 -c <config> -d COMMAND
         "#{var.upcase}=#{full_map}"
       elsif var == 'domains' and val.respond_to?('join')
         "#{var.upcase}=#{val.join(' ')}"
+      elsif val.is_a?(String) and val.start_with?('$')
+        ref_container = @config['applications'].select { |a,c| a == val.tr('$', '') }
+        if ref_container.nil?
+          @log.error("Could not find reference for #{val} in configuration.")
+          exit 3
+        else
+          "#{@prefix}-#{cprefix}-#{ref_container.first[0]}"
+        end
       else
         "#{var.upcase}=#{val}"
       end
