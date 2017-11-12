@@ -69,7 +69,8 @@ Usage: bee2 -c <config> -d COMMAND
       client_key: File.join(cert_path, 'docker-client.pem'),
       ssl_ca_file: File.join(cert_path, 'ca.pem'),
       ssl_verify_peer: false,
-      scheme: 'https'
+      scheme: 'https',
+      read_timeout: @config.fetch('docker',{}).fetch('read_timeout', 900)
     }
 
     case cmds[1]

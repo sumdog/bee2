@@ -48,6 +48,7 @@ security:
     pgp_id: 1ACBD3G
 docker:
   prefix: bee2
+  read_timeout: 900
   backup:
     web1:
       storage_dir: /media/backups
