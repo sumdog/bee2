@@ -60,7 +60,7 @@ frontend https
 
 
 backend bk_letsencrypt
-    server certbot bee2-app-certbot:8080
+    server certbot {}:8080
 backend bk_ssl_default
     server default_ssl 127.0.0.1:8080
 """
@@ -99,8 +99,9 @@ def map_domains():
     return domain_map
 
 if __name__ == '__main__':
+    certbot_container = environ['CERTBOT_CONTAINER']
     domian_map = map_domains()
-    config = template.format(ssl_vhosts(domian_map), ssl_backends(domian_map))
+    config = template.format(ssl_vhosts(domian_map), ssl_backends(domian_map), certbot_container)
     copyfile('/usr/local/etc/haproxy/dummy.pem', '/etc/letsencrypt/live/dummy.pem')
     with open('/usr/local/etc/haproxy/haproxy.cfg', 'w') as fd:
         fd.write(config)

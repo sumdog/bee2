@@ -32,8 +32,9 @@ if __name__ == '__main__':
     dryrun = environ['TEST'].lower() == 'true'
     port = environ['PORT']
     renew = int(environ['RENEW_INTERVAL'])
+    haproxy_container = environ['HAPROXY_CONTAINER']
 
-    while call(['check_docker', '--containers', 'bee2-app-haproxy', '--status', 'running']) != 0:
+    while call(['check_docker', '--containers', haproxy_container, '--status', 'running']) != 0:
         print('Waiting on HAProxy to become active')
         sleep(2)
 

@@ -1,5 +1,8 @@
 FROM haproxy:1.7.9
 
+ENV CERTBOT_CONTAINER bee2-app-certbot
+ENV DOMAINS example.com
+
 RUN apt-get -y update
 RUN apt-get -y install python
 
