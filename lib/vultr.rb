@@ -25,7 +25,7 @@ class VultrProvisioner
       exit 1
     end
 
-    @state_file = config['provisioner']['state-file']
+    @state_file = config['provisioner']['state_file']
     if File.exists? @state_file
       @state = YAML.load_file(@state_file)
     else

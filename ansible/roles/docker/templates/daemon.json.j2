@@ -4,5 +4,7 @@
 	"tlscacert": "{{ docker_ca }}",
 	"tlscert": "{{ server_crt }}",
 	"tlskey": "{{ server_key }}",
+	"ipv6": true,
+	"fixed-cidr-v6": "{{ state.servers[ansible_hostname].ipv6.subnet }}1/80",
 	"hosts": ["127.0.0.1:2376", "{{ private_ip }}:2376", "fd://"]
 }

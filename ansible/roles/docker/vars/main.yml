@@ -14,3 +14,4 @@ client_ext_file: /etc/docker/client-extfile.cnf
 local_client_crt: "../conf/docker/{{ ansible_hostname }}/docker-client.crt"
 local_client_key: "../conf/docker/{{ ansible_hostname }}/docker-client.pem"
 local_ca: "../conf/docker/{{ ansible_hostname }}/ca.crt"
+provisioner_state_file: "../{{ provisioner.state_file }}"
