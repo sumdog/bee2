@@ -11,7 +11,7 @@ log = Logger.new(STDOUT)
 options = {}
 opts = OptionParser.new do |opts|
 
-  opts.banner = 'Usage: bee2 [-v] [-h|--help] [-c <config>] [-p [-r]] [-d]'
+  opts.banner = 'Usage: bee2 [-v] [-h|--help] [-c <config>] [-p [-r]] [-d COMMAND]'
 
   opts.on('-c','--config CONFIG','Configuration File') do |config|
     options[:config] = config
