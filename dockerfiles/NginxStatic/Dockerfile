@@ -1,7 +1,7 @@
 FROM nginx:1.13.6
 
 COPY nginx.conf /etc/nginx/nginx.conf
-RUN chmod 777 /var/log/nginx
+RUN chown -R nginx:nginx /var/log/nginx
 
 EXPOSE 8080
 
