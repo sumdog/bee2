@@ -1,2 +1,3 @@
 conf/*
 ansible/*.retry
+Gemfile.lock
