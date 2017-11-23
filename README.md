@@ -6,9 +6,9 @@ Documentation
 =============
 You can learn more about Bee2 from the following posts:
 
-  * Part 1: [Bee2: Creating a Small Infrastructure for Docker Apps](http://penguindreams.org/blog/bee2-creating-a-small-infrastructure-for-docker-apps/)
-  * Part 2: [Bee2: Wrestling with the Vultr API](http://penguindreams.org/blog/bee2-wrestling-with-the-vultr-api/)
-  * Part 3: [Bee2: Automating HAProxy and LetsEncrypt with Docker](http://penguindreams.org/bee2-automating-haproxy-and-letsencrypt-with-docker/)
+* Part 1: [Bee2: Wrestling with the Vultr API](http://penguindreams.org/blog/bee2-wrestling-with-the-vultr-api/)
+* Part 2: [Bee2: Creating a Small Infrastructure for Docker Apps](http://penguindreams.org/blog/bee2-creating-a-small-infrastructure-for-docker-apps/)
+* Part 3: [Bee2: Automating HAProxy and LetsEncrypt with Docker](http://penguindreams.org/bee2-automating-haproxy-and-letsencrypt-with-docker/)
 
 
 Installation
