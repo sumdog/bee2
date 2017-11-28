@@ -289,7 +289,8 @@ Usage: bee2 -c <config> -d COMMAND
             Docker::Image.build_from_dir(git_dir).id
           }
         when params.key?('image')
-          params['image']
+          @log.info("Pulling Image #{params['image']}")
+          Docker::Image.create('fromImage' => params['image']).id
         else
           @log.error('Missing image key')
         end
