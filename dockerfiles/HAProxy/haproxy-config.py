@@ -85,7 +85,7 @@ def ssl_backends(domain_map):
             dsh = domain.replace('.', '_')
             backends += """
     backend bk_{}
-      server {} {}:8080 check
+      server {} {}:8080 init-addr libc,none check
             """.format(dsh, dsh, link)
     return backends
 
