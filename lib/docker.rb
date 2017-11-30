@@ -185,7 +185,7 @@ Usage: bee2 -c <config> -d COMMAND
           @log.error("Could not find reference for #{val} in configuration.")
           exit 3
         else
-          "#{@prefix}-#{cprefix}-#{ref_container.first[0]}"
+          "#{var.upcase}=#{@prefix}-#{cprefix}-#{ref_container.first[0]}"
         end
       else
         "#{var.upcase}=#{val}"
