@@ -7,5 +7,6 @@
   roles:
    - root-password
    - private-net
+   - ndppd
    - docker
    - firewall

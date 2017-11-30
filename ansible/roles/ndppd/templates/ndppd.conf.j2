@@ -1,0 +1,7 @@
+proxy ens3 {
+  timeout 500
+  ttl 30000
+  rule {{ state.servers[ansible_hostname].ipv6.subnet }}/80 {
+    static
+  }
+}

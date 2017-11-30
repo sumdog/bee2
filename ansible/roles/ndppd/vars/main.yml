@@ -1,0 +1,3 @@
+---
+provisioner_state_file: "../{{ provisioner.state_file }}"
+ndppd_conf: /etc/ndppd.conf
