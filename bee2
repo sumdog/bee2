@@ -69,6 +69,11 @@ when 'digitalocean'
 end
 
 if options[:provision]
+  puts 'WARNING: Rebuilding will destroy existing servers. Do you wish to contine? [Type: YES]'
+  if gets.chomp != 'YES'
+    puts 'Rebuild aborted'
+    exit 5
+  end
   p.provision(rebuild = options[:rebuild])
 end
 
