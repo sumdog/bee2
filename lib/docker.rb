@@ -4,6 +4,9 @@ require 'docker'
 require 'git'
 require 'fileutils'
 require 'tmpdir'
+require 'json'
+require_relative 'passstore'
+require_relative 'util'
 
 class DockerHandler
 
@@ -42,6 +45,7 @@ Usage: bee2 -c <config> -d COMMAND
     @log = log
     @config = config
     @prefix = @config.fetch('docker',{}).fetch('prefix','bee2')
+    @passstore = PassStore.new(@config)
 
     cmds = command.split(':')
     server = cmds[0]
@@ -148,6 +152,31 @@ Usage: bee2 -c <config> -d COMMAND
       }
   end
 
+  # Returns {"mysql" => "***", "postgres" => "***", "redis => "***"}
+  def db_admin_passwords
+    Hash[ db_mapping.uniq { |i| i[:db] }.map { |j| j[:db] }.collect { |db|
+      [db, @passstore.get_or_generate_password("database/#{db}", 'admin') ]
+    }]
+  end
+
+  # Returns [ {:container => "name", :password => "***", :db=>"mysql"} ]
+  def db_mapping
+    # Identify all containers that request a database (link: _dbtype)
+    db_map = ['applications', 'jobs'].map { |section|
+      @config[section].select { |app, cfg|
+        cfg.has_key?('db') }.map { |app, l|
+          l['db'].map { |db|
+            { :container => app, :db => db }
+          }
+        }
+    }.flatten
+
+    # Ensure passwords for all of them
+    db_map.map { |m|
+      m.merge({:password => @passstore.get_or_generate_password("database/#{m[:db]}", m[:container])})
+    }
+  end
+
   def existing_containers
     enum_for(:bee2_containers).to_a
   end
@@ -169,7 +198,7 @@ Usage: bee2 -c <config> -d COMMAND
   # to be passed in to Docker
   # Handles the spcial case DOMAINS=all, expanding it to
   # a space seperated list of domains
-  def transform_envs(envs, cprefix)
+  def transform_envs(name, envs, cprefix)
     envs.map { |var,val|
       if var == 'domains' and val == 'all'
         # DOMAINS="bee2-app-name1:example.com,example.org bee2-app-name2:someotherdomain.com"
@@ -179,13 +208,34 @@ Usage: bee2 -c <config> -d COMMAND
         "#{var.upcase}=#{full_map}"
       elsif var == 'domains' and val.respond_to?('join')
         "#{var.upcase}=#{val.join(' ')}"
+      elsif val.is_a?(String) and val.start_with?('_')
+        # Database vars
+        (db_type, db_var) = Util.lstrip_underscore(val).split('^')
+        case db_type
+        when 'dbmap'
+          db_info = {:admin => db_admin_passwords, :containers => db_mapping}
+          "#{var.upcase}=#{JSON.dump(db_info)}"
+        else
+          case db_var
+          when 'password'
+            db_pass = db_mapping.select { |c|
+              c[:container] == name and c[:db] == db_type
+            }.first[:password]
+            "#{var.upcase}=#{db_pass}"
+          when 'adminpass'
+            "#{var.upcase}=#{db_admin_passwords[db_type]}"
+          else
+            @log.error("Unknown variable #{db_var} for #{db_type}")
+            exit 3
+          end
+        end
       elsif val.is_a?(String) and val.start_with?('$')
         ref_container = @config['applications'].select { |a,c| a == val.tr('$', '') }
         if ref_container.nil?
           @log.error("Could not find reference for #{val} in configuration.")
           exit 3
         else
-          "#{var.upcase}=#{@prefix}-#{cprefix}-#{ref_container.first[0]}"
+          "#{var.upcase}=#{@prefix}-app-#{ref_container.first[0]}"
         end
       else
         "#{var.upcase}=#{val}"
@@ -238,14 +288,20 @@ Usage: bee2 -c <config> -d COMMAND
         build_dir = File.join('./dockerfiles', build_dir)
       end
 
+      # Combine link and db
+      links = cfg.fetch('link', []) + cfg.fetch('db', [])
+      if links.empty?
+        links = nil
+      end
+
       create_container("#{@prefix}-#{tcfg[:prefix]}-#{name}",
         cfg.fetch('image', nil),
         tcfg[:prefix],
         build_dir,
         cfg.fetch('git', nil),
         cfg.fetch('ports', nil),
-        transform_envs(cfg.fetch('env', []), tcfg[:prefix]),
-        cfg.fetch('link', nil),
+        transform_envs(name, cfg.fetch('env', []), tcfg[:prefix]),
+        links,
         cfg.fetch('volumes', nil)
       )
     }.inject(&:merge)
@@ -262,7 +318,7 @@ Usage: bee2 -c <config> -d COMMAND
          'Env' => env,
          'ExposedPorts' => (ports.map { |port| {"#{port}/tcp" => {}}}.inject(:merge) if not ports.nil?),
          'HostConfig' => {
-           'Links' => (link.map{ |l| "#{@prefix}-#{cprefix}-#{l}" } if not link.nil?),
+           'Links' => (link.map{ |l| "#{@prefix}-app-#{l}" } if not link.nil?),
            'Binds' => (volumes if not volumes.nil?),
            'PortBindings' => (ports.map { |port| {
              "#{port}/tcp" => [{ 'HostPort' => "#{port}" }]}
