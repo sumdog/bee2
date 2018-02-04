@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 
-from os import environ
+from os import environ, makedirs, path
 from shutil import copyfile
+import socket
+import sys
 
 template = """
 global
@@ -18,13 +20,13 @@ defaults
     timeout connect 5000
     timeout client 50000
     timeout server 50000
-    errorfile 400 /usr/local/etc/haproxy/errors/400.http
-    errorfile 403 /usr/local/etc/haproxy/errors/403.http
-    errorfile 408 /usr/local/etc/haproxy/errors/408.http
-    errorfile 500 /usr/local/etc/haproxy/errors/500.http
-    errorfile 502 /usr/local/etc/haproxy/errors/502.http
-    errorfile 503 /usr/local/etc/haproxy/errors/503.http
-    errorfile 504 /usr/local/etc/haproxy/errors/504.http
+    #errorfile 400 /usr/local/etc/haproxy/errors/400.http
+    #errorfile 403 /usr/local/etc/haproxy/errors/403.http
+    #errorfile 408 /usr/local/etc/haproxy/errors/408.http
+    #errorfile 500 /usr/local/etc/haproxy/errors/500.http
+    #errorfile 502 /usr/local/etc/haproxy/errors/502.http
+    #errorfile 503 /usr/local/etc/haproxy/errors/503.http
+    #errorfile 504 /usr/local/etc/haproxy/errors/504.http
     maxconn 4096
     mode http
     # Add x-forwarded-for header.
@@ -102,6 +104,21 @@ if __name__ == '__main__':
     certbot_container = environ['CERTBOT_CONTAINER']
     domian_map = map_domains()
     config = template.format(ssl_vhosts(domian_map), ssl_backends(domian_map), certbot_container)
-    copyfile('/usr/local/etc/haproxy/dummy.pem', '/etc/letsencrypt/live/dummy.pem')
-    with open('/usr/local/etc/haproxy/haproxy.cfg', 'w') as fd:
+
+    live_crt = '/etc/letsencrypt/live'
+    if not path.exists(live_crt):
+        print('Creating Letsencrypt Live Directory')
+        os.makedirs(live_crt)
+
+    copyfile('dummy.pem', path.join(live_crt, 'dummy.pem'))
+    print('Writing HAProxy Configuration')
+    with open('/etc/haproxy/haproxy.cfg', 'w') as fd:
         fd.write(config)
+
+    # reload HAProxy
+    print('Reloading HAProxy')
+    sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    sock.connect('/var/run/docker.sock')
+    sock.sendall(str.encode('POST /containers/{}/kill?signal=HUP HTTP/1.0\r\n'.format(environ['HAPROXY_CONTAINER'])))
+
+    print('Done')

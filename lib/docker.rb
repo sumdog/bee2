@@ -203,7 +203,7 @@ Usage: bee2 -c <config> -d COMMAND
       if var == 'domains' and val == 'all'
         # DOMAINS="bee2-app-name1:example.com,example.org bee2-app-name2:someotherdomain.com"
         full_map = all_domains.map { |app,domains|
-          "#{@prefix}-#{cprefix}-#{app}:#{domains.join(',')}"
+          "#{@prefix}-app-#{app}:#{domains.join(',')}"
         }.join(' ')
         "#{var.upcase}=#{full_map}"
       elsif var == 'domains' and val.respond_to?('join')
