@@ -4,7 +4,7 @@ require 'yaml'
 require 'optparse'
 require 'logger'
 require_relative 'lib/vultr'
-require_relative 'lib/docker'
+require_relative 'lib/dockerhandler'
 
 log = Logger.new(STDOUT)
 

@@ -89,6 +89,7 @@ Usage: bee2 -c <config> -d COMMAND
       backup_volumes(server)
     when 'restore'
       restore_volumes(server, cmds[2])
+    when 'test'
     else
       @log.error("Unknown command #{cmds[1]}")
       usage()
