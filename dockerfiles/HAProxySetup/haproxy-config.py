@@ -50,10 +50,11 @@ frontend http
 frontend https
     # TLS/SNI
     bind :443 ssl crt /etc/letsencrypt/live
-    mode tcp
+    mode http
 
-    tcp-request inspect-delay 5s
-    tcp-request content accept if {{ req_ssl_hello_type 1 }}
+    # Awstats
+    acl is_awstats path_beg -i /stats/
+    use_backend bk_awstats if is_awstats
 
     {}
     default_backend bk_ssl_default
@@ -63,6 +64,8 @@ frontend https
 
 backend bk_letsencrypt
     server certbot {}:8080
+backend bk_awstats
+    server awstats {}:8080
 backend bk_ssl_default
     server default_ssl 127.0.0.1:8080
 """
@@ -102,8 +105,12 @@ def map_domains():
 
 if __name__ == '__main__':
     certbot_container = environ['CERTBOT_CONTAINER']
+    awstats_container = environ['AWSTATS_CONTAINER']
     domian_map = map_domains()
-    config = template.format(ssl_vhosts(domian_map), ssl_backends(domian_map), certbot_container)
+    config = template.format(ssl_vhosts(domian_map),
+                             ssl_backends(domian_map),
+                             certbot_container,
+                             awstats_container)
 
     live_crt = '/etc/letsencrypt/live'
     if not path.exists(live_crt):
