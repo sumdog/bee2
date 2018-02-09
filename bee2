@@ -5,6 +5,7 @@ require 'optparse'
 require 'logger'
 require_relative 'lib/vultr'
 require_relative 'lib/dockerhandler'
+require_relative 'lib/synchandler'
 
 log = Logger.new(STDOUT)
 
@@ -39,7 +40,9 @@ opts = OptionParser.new do |opts|
     options[:inventory] = ansible
   end
 
-  #opts.on('-s', '--servers SERVERS', '')
+  opts.on('-s', '--sync SERVERS', 'Sync data between host and server') do |srv|
+    options[:sync] = srv
+  end
 
   opts.on_tail("-h", "--help", "Show this message") do
     STDERR.puts opts
@@ -104,6 +107,10 @@ if options[:inventory]
     end
     Process.wait
   }
+end
+
+if options[:sync]
+  SyncHandler.new(config, log, options[:sync])
 end
 
 if options[:docker]
