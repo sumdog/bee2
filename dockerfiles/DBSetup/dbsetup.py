@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 from os import environ as env
 import mysql.connector
+import psycopg2
+from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 import json
 
 # Format:
@@ -18,6 +20,7 @@ db_list = json.loads(env['DATABASE_JSON'])
 def dbs(db_type):
     return [i for i in db_list['containers'] if i['db'] == db_type]
 
+# Mysql
 
 cnx = mysql.connector.connect(user = 'root',
                               password = db_list['admin']['mysql'],
@@ -27,9 +30,34 @@ cur = cnx.cursor()
 
 for my in dbs('mysql'):
     (app,password) = my['container'], my['password']
+    print('MySQL DB Setup: {}'.format(app))
     cur.execute("CREATE DATABASE IF NOT EXISTS {}".format(app))
     cur.execute("GRANT ALL ON {}.* TO '{}'@'%' IDENTIFIED BY '{}'".format(
                app,app,password))
 
 cur.close()
 cnx.close()
+
+# Postgres
+
+conn = psycopg2.connect(dbname = 'postgres', user = 'postgres',
+                        password = db_list['admin']['postgres'],
+                        host = env['POSTGRES_HOST'])
+conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
+cur = conn.cursor()
+
+for pg in dbs('postgres'):
+    (app,password) = pg['container'], pg['password']
+    sql = "SELECT COUNT(*) = 0 FROM pg_catalog.pg_database WHERE datname = '{}'"
+    cur.execute(sql.format(app))
+    not_exists_row = cur.fetchone()
+    not_exists = not_exists_row[0]
+    if not_exists:
+        print('Postgres DB Setup: {}'.format(app))
+        cur.execute('CREATE DATABASE {}'.format(app))
+        sql = "CREATE ROLE {} LOGIN PASSWORD '{}'".format(app, password)
+        cur.execute(sql)
+        sql = 'GRANT ALL ON DATABASE {} to {}'.format(app, app)
+        cur.execute(sql)
+    else:
+        print('Postgres DB {} Exists'.format(app))
