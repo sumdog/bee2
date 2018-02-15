@@ -90,6 +90,7 @@ Usage: bee2 -c <config> -d COMMAND
       clean_containers(cmds[2])
       launch_containers(config_to_containers('apps', server, cmds[2]))
     when 'run'
+      clean_containers(cmds[2], 'job')
       launch_containers(config_to_containers('jobs', server, cmds[2]), true)
     when 'backup'
       backup_volumes(server)
@@ -269,10 +270,10 @@ Usage: bee2 -c <config> -d COMMAND
     }.flatten
   end
 
-  def clean_containers(name)
+  def clean_containers(name, ctype = 'app')
 
     containers = if not name.nil?
-      existing_containers.select { |c| c.info['Names'].any? { |n| n == "/#{@prefix}-app-#{name}" } }
+      existing_containers.select { |c| c.info['Names'].any? { |n| n == "/#{@prefix}-#{ctype}-#{name}" } }
     else
       existing_containers
     end
@@ -415,7 +416,6 @@ Usage: bee2 -c <config> -d COMMAND
             post_complete.(c)
           end
 
-          c.delete(:force => true)
         end
       else
         @log.info("Container #{name} already exists")
