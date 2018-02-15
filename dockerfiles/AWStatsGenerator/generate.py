@@ -146,7 +146,7 @@ LoadPlugin="ipv6"
 
 # Taken from https://gist.github.com/eculver/1420227
 def salt():
-    """Returns a string of 2 randome letters"""
+    """Returns a string of 2 random letters"""
     letters = 'abcdefghijklmnopqrstuvwxyz' \
               'ABCDEFGHIJKLMNOPQRSTUVWXYZ' \
               '0123456789/.'
@@ -181,10 +181,11 @@ if __name__ == '__main__':
                                         salt())))
 
     for d in domains:
-        conf = template.format(logs, d, d, d, d, awdata)
-        cfile = path.join(awconfig, 'awstats.{}.conf'.format(d))
-        with open(cfile, 'w') as cf:
-            print('Configuring {}'.format(d))
-            cf.write(conf)
-        print('Generating Stats for {}'.format(d))
-        call(['/usr/bin/awstats', '-config={}'.format(d)])
+        if path.exists(path.join(logs, '{}.log'.format(d))):
+            conf = template.format(logs, d, d, d, d, awdata)
+            cfile = path.join(awconfig, 'awstats.{}.conf'.format(d))
+            with open(cfile, 'w') as cf:
+                print('Configuring {}'.format(d))
+                cf.write(conf)
+            print('Generating Stats for {}'.format(d))
+            call(['/usr/bin/awstats', '-config={}'.format(d)])
