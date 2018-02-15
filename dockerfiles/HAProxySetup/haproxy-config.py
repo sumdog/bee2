@@ -41,8 +41,6 @@ frontend http
     acl is_letsencrypt path_beg -i /.well-known/acme-challenge/
 
     # SSL Redirect
-    http-request set-header X-Forwarded-Port %[dst_port]
-    http-request add-header X-Forwarded-Proto https if {{ ssl_fc }}
     redirect scheme https if !{{ ssl_fc }} !is_letsencrypt
 
     use_backend bk_letsencrypt if is_letsencrypt
@@ -51,6 +49,9 @@ frontend https
     # TLS/SNI
     bind :::443 v4v6 ssl crt /etc/letsencrypt/live
     mode http
+
+    http-request set-header X-Forwarded-Port %[dst_port]
+    http-request add-header X-Forwarded-Proto https if {{ ssl_fc }}
 
     # Awstats
     acl is_awstats path_beg -i /stats/
