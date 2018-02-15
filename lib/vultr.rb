@@ -80,6 +80,7 @@ class VultrProvisioner
     ensure_ssh_keys
     reserve_ips
     populate_ips
+    web_ipv6
     if rebuild
       @log.info('Rebuilding Servers')
       delete_provisioned_servers
@@ -91,6 +92,19 @@ class VultrProvisioner
 
     # Per ticket TTD-04IGO, removing auto assigned IPv6 addresses is impossible via the API
     # remove_unwanted_ips
+  end
+
+  def web_ipv6
+    @servers.select { |name, s|
+      s['dns'].has_key?('web')
+    }.each { |name,cfg|
+      if not @state['servers'][name].has_key?('static_web')
+        ipv6 = @state['servers'][name]['ipv6']['subnet'] + cfg['ipv6']['docker']['static_web']
+        @log.info("Creating IPv6 Web IP #{ipv6} for #{name}")
+        @state['servers'][name]['ipv6']['static_web'] = ipv6
+      end
+    }
+    save_state
   end
 
   def write_inventory
@@ -154,11 +168,13 @@ class VultrProvisioner
             {'domain' => domain, 'name' => s, 'type' => 'A', 'data' => server_config['ipv4']['addr'] }
          when 'ipv6'
             {'domain' => domain, 'name' => s, 'type' => 'AAAA', 'data' => server_config['ipv6']['addr'] }
+          when 'ipv6-web'
+             {'domain' => domain, 'name' => s, 'type' => 'AAAA', 'data' => server_config['ipv6']['static_web'] }
          when 'private_ip'
             {'domain' => domain, 'name' => s, 'type' => 'A', 'data' => @servers[s]['private_ip'] }
          when 'web'
             [{'domain' => domain, 'name' => "www.#{s}", 'type' => 'A', 'data' => server_config['ipv4']['addr'] },
-            {'domain' => domain, 'name' => "www.#{s}", 'type' => 'AAAA', 'data' => server_config['ipv6']['addr'] }]
+            {'domain' => domain, 'name' => "www.#{s}", 'type' => 'AAAA', 'data' => server_config['ipv6']['static_web'] }]
          end
       }.flatten.each { |d|
         @log.info("Creating/Updating #{d['name']}.#{d['domain']} #{d['type']} #{d['data']}")
@@ -170,15 +186,21 @@ class VultrProvisioner
   def update_dns
     current_dns = request('GET', 'dns/list')
     @state['servers'].each { |server, config|
-      dns_sets = {"public"=>["ipv4", "ipv6"], "private"=>["private_ip"], "web"=>["ipv4", "ipv6", "web"]}
+      dns_sets = {"public"=>["ipv4", "ipv6"], "private"=>["private_ip"], "web"=>["ipv4", "ipv6-web", "web"]}
       ipv4 = @state['servers'][server]['ipv4']['addr']
       ipv6 = @state['servers'][server]['ipv6']['addr']
       dns_sets.each { |ds_type, typ_cfg|
         records = @servers[server]['dns'][ds_type]
+
+        if ds_type == 'web'
+          ipv6 = @state['servers'][server]['ipv6']['static_web']
+        end
+
         if not records.nil?
           domain_records(records).each { |domain, subdomains|
             request('GET', 'dns/records', {'domain' => domain}, -> {
               @log.info("Domain #{domain} exists")
+
               dns_update_check({'domain' => domain, 'name' => '', 'type' => 'A', 'data' => ipv4 })
               dns_update_check({'domain' => domain, 'name' => '', 'type' => 'AAAA', 'data' => ipv6 })
               create_subdomains(subdomains, domain, config, typ_cfg)
@@ -188,7 +210,7 @@ class VultrProvisioner
                 @log.debug("IP Map: #{server} -> #{ipv4}/#{ipv6}")
                 request('POST', 'dns/create_domain', {'domain' => domain, 'serverip' => ipv4 })
                 dns_update_check({'domain' => domain, 'name' => '', 'type' => 'AAAA', 'data' => ipv6 })
-                create_subdomains(['www'], domain, config, ['ipv4', 'ipv6'])
+                create_subdomains(['www'], domain, config, ['ipv4', 'ipv6-web'])
               else
                 request('POST', 'dns/create_domain', {'domain' => domain, 'serverip' => '127.0.0.1' })
               end

@@ -46,6 +46,7 @@ Usage: bee2 -c <config> -d COMMAND
     @config = config
     @prefix = @config.fetch('docker',{}).fetch('prefix','bee2')
     @passstore = PassStore.new(@config)
+    @network = "#{@prefix}-network"
 
     cmds = command.split(':')
     server = cmds[0]
@@ -77,6 +78,11 @@ Usage: bee2 -c <config> -d COMMAND
       read_timeout: @config.fetch('docker',{}).fetch('read_timeout', 900)
     }
 
+
+    if cmds[1] != 'test'
+      establish_network(server)
+    end
+
     case cmds[1]
     when 'build'
       launch_containers(config_to_containers('apps', server, cmds[2]))
@@ -93,6 +99,25 @@ Usage: bee2 -c <config> -d COMMAND
     else
       @log.error("Unknown command #{cmds[1]}")
       usage()
+    end
+  end
+
+  def state
+    YAML.load_file(@config['provisioner']['state_file'])
+  end
+
+  def establish_network(server)
+    ipv6_subet = state['servers'][server]['ipv6']['subnet']
+    ipv6_suffix = @config['servers'][server]['ipv6']['docker']['suffix_net']
+    ipv6 = "#{ipv6_subet}#{ipv6_suffix}"
+
+    if Docker::Network.all.select { |n| n.info['Name'] == @network }.empty?
+      @log.info("Creating network #{@network} with IPv6 Subnet #{ipv6}")
+      Docker::Network.create(@network, {"EnableIPv6" => true,
+        "IPAM" => {"Config" => [
+          {"Subnet" => ipv6}
+        ]}
+      })
     end
   end
 
@@ -289,10 +314,12 @@ Usage: bee2 -c <config> -d COMMAND
         build_dir = File.join('./dockerfiles', build_dir)
       end
 
-      # Combine link and db
-      links = cfg.fetch('link', []) + cfg.fetch('db', [])
-      if links.empty?
-        links = nil
+      # Web static IPv6
+      static_ipv6 = nil
+      if cfg.fetch('ipv6_web', false)
+        ipv6_subet = state['servers'][server]['ipv6']['subnet']
+        ipv6_web = @config['servers'][server]['ipv6']['docker']['static_web']
+        static_ipv6 = "#{ipv6_subet}#{ipv6_web}"
       end
 
       create_container("#{@prefix}-#{tcfg[:prefix]}-#{name}",
@@ -302,13 +329,13 @@ Usage: bee2 -c <config> -d COMMAND
         cfg.fetch('git', nil),
         cfg.fetch('ports', nil),
         transform_envs(name, cfg.fetch('env', []), tcfg[:prefix]),
-        links,
-        cfg.fetch('volumes', nil)
+        cfg.fetch('volumes', nil),
+        static_ipv6
       )
     }.inject(&:merge)
   end
 
-  def create_container(name, image, cprefix, build_dir, git, ports, env, link, volumes)
+  def create_container(name, image, cprefix, build_dir, git, ports, env, volumes, static_ipv6 = nil)
     {
      name => {
        'image' => image,
@@ -317,12 +344,21 @@ Usage: bee2 -c <config> -d COMMAND
        'container_args' => {
          "RestartPolicy": { "Name": "unless-stopped" },
          'Env' => env,
+         'NetworkingConfig' =>
+           {'EndpointsConfig' =>
+             {@network =>
+               {
+                 'IPAMConfig' => {'IPv6Address' => static_ipv6 }.reject{ |k,v| v.nil? }
+               }
+             }
+           },
          'ExposedPorts' => (ports.map { |port| {"#{port}/tcp" => {}}}.inject(:merge) if not ports.nil?),
          'HostConfig' => {
-           'Links' => (link.map{ |l| "#{@prefix}-app-#{l}" } if not link.nil?),
            'Binds' => (volumes if not volumes.nil?),
            'PortBindings' => (ports.map { |port| {
-             "#{port}/tcp" => [{ 'HostPort' => "#{port}" }]}
+             "#{port}/tcp" => [
+               { 'HostPort' => "#{port}" }
+             ]}
            }.inject(:merge) if not ports.nil?)
          }.reject{ |k,v| v.nil? }
        }.reject{ |k,v| v.nil? }
@@ -332,7 +368,8 @@ Usage: bee2 -c <config> -d COMMAND
 
   def launch_containers(containers, wait = false, post_complete = nil)
     containers.map { |name, params|
-      # for all bee2 containers that don't exist yet
+
+      # for all bee2 app containers that don't exist yet
       if not existing_containers.any? { |e| e.info['Names'].any? { |n| n == "/#{name}" } }
         image = case
         when params.key?('build_dir')

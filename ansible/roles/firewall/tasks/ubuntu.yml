@@ -20,6 +20,12 @@
   - name: 443 is open
     ufw: rule=allow port=443 proto=tcp
 
+  - name: 80 for Docker IPv6 HAProxy is open
+    ufw: rule=allow proto=tcp dest={{ docker_ipv6_web }} port=80
+
+  - name: 443 for Docker IPv6 HAProxy is open
+    ufw: rule=allow proto=tcp dest={{ docker_ipv6_web }} port=443
+
   - name: Disable default in
     ufw: direction=incoming policy=deny
     async: 0

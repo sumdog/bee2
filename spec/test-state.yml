@@ -1,0 +1,7 @@
+---
+servers:
+  web1:
+    ipv6:
+      subnet: 'a:b:c:d::'
+      static_web: a:b:c:d::2:0:a
+  web2:

@@ -34,7 +34,7 @@ defaults
     option http-server-close
 
 frontend http
-    bind :80
+    bind :::80 v4v6
     mode  http
 
     # Let's Encrypt
@@ -49,7 +49,7 @@ frontend http
 
 frontend https
     # TLS/SNI
-    bind :443 ssl crt /etc/letsencrypt/live
+    bind :::443 v4v6 ssl crt /etc/letsencrypt/live
     mode http
 
     # Awstats
@@ -73,6 +73,7 @@ backend bk_ssl_default
 def ssl_vhosts(domain_map):
     vhosts = ''
     for link,domains in domain_map.items():
+        print(link)
         for domain in domains:
             dsh = domain.replace('.', '_')
             vhosts += """
@@ -80,18 +81,16 @@ def ssl_vhosts(domain_map):
         acl {}_www ssl_fc_sni -i www.{}
         use_backend bk_{} if {}
         use_backend bk_{} if {}_www
-            """.format(dsh, domain, dsh, domain, dsh, dsh, dsh, dsh)
+            """.format(dsh, domain, dsh, domain, link, dsh, link, dsh)
     return vhosts
 
 def ssl_backends(domain_map):
     backends = ''
     for link,domains in domain_map.items():
-        for domain in domains:
-            dsh = domain.replace('.', '_')
-            backends += """
+        backends += """
     backend bk_{}
-      server {} {}:8080 init-addr libc,none check
-            """.format(dsh, dsh, link)
+      server srv_{} {}:8080 init-addr libc,none check
+            """.format(link, link, link)
     return backends
 
 def map_domains():

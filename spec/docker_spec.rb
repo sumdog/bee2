@@ -7,8 +7,17 @@ log = Logger.new(STDOUT)
 RSpec.describe DockerHandler do
   prefix = 'foo2'
   config = <<-CONFIG
+  provisioner:
+    state_file: spec/test-state.yml
   docker:
     prefix: #{prefix}
+  servers:
+    web1:
+      ipv6:
+        docker:
+          suffix_bridge: 1:0:0/96
+          suffix_net: 2:0:0/96
+          static_web: 2:0:a
   security:
     pgp_id: ABCDEFG
   applications:
@@ -19,8 +28,6 @@ RSpec.describe DockerHandler do
           - mail.penguindreams.org
     content-engine:
       server: web1
-      link:
-        - nginx-static
       db:
         - mysql
     image-poster:
@@ -41,12 +48,10 @@ RSpec.describe DockerHandler do
           - rearviewmirror.cc
     haproxy:
       server: web1
+      ipv6_web: true
       env:
         domains: all
         certbot_container: $certbot
-      link:
-        - nginx-static
-        - certbot
       ports:
         - 80
         - 443
@@ -63,7 +68,8 @@ RSpec.describe DockerHandler do
       env:
         location: Wellington
   CONFIG
-  config = DockerHandler.new(YAML.load(config), log, 'web1:test')
+  cfg_yaml = YAML.load(config)
+  config = DockerHandler.new(cfg_yaml, log, 'web1:test')
 
   describe "domain mapping" do
     it "returns a list of each container and its domains" do
@@ -73,17 +79,31 @@ RSpec.describe DockerHandler do
     end
   end
 
+  describe "state loading" do
+    it "loads ipv6 addresses for web containers" do
+      expect(config.state['servers']['web1']['ipv6']['static_web']).to eq('a:b:c:d::2:0:a')
+    end
+    it "no settings for web2" do
+      expect(config.state['servers']['web2']).to be_nil
+    end
+    it "static ipv6 address should match subnet and suffix" do
+      expect(config.state['servers']['web1']['ipv6']['static_web']).to eq(
+         config.state['servers']['web1']['ipv6']['subnet'] +
+         cfg_yaml['servers']['web1']['ipv6']['docker']['static_web']
+      )
+    end
+  end
+
   describe "container configuration" do
-    it "mapping without links" do
+    it "shouldn't use links" do
       r = config.config_to_containers('apps', 'web1', 'nginx-static')
       expect(r["#{prefix}-app-nginx-static"]['container_args']['HostConfig']).not_to have_key('Links')
     end
 
-    it "mapping with links" do
+    it "connect to network" do
       r = config.config_to_containers('apps', 'web1', 'haproxy')
-      host_config = r["#{prefix}-app-haproxy"]['container_args']['HostConfig']
-      expect(host_config).to have_key('Links')
-      expect(host_config['Links']).to contain_exactly("#{prefix}-app-nginx-static", "#{prefix}-app-certbot")
+      host_config = r["#{prefix}-app-haproxy"]['container_args']['NetworkingConfig']['EndpointsConfig']
+      expect(host_config).to have_key("#{prefix}-network")
     end
 
     it "mapping with variables in env referencing other containers" do
@@ -100,20 +120,6 @@ RSpec.describe DockerHandler do
       expect(r["#{prefix}-app-haproxy"]['container_args']['HostConfig']['PortBindings']).to eq(
         {"80/tcp"=>[{"HostPort"=>"80"}], "443/tcp"=>[{"HostPort"=>"443"}]}
       )
-    end
-
-    it "mapping with databases" do
-      r = config.config_to_containers('apps', 'web1', 'image-poster')
-      host_config = r["#{prefix}-app-image-poster"]['container_args']['HostConfig']
-      expect(host_config).to have_key('Links')
-      expect(host_config['Links']).to contain_exactly("#{prefix}-app-postgres")
-    end
-
-    it "mapping with databases and links" do
-      r = config.config_to_containers('apps', 'web1', 'content-engine')
-      host_config = r["#{prefix}-app-content-engine"]['container_args']['HostConfig']
-      expect(host_config).to have_key('Links')
-      expect(host_config['Links']).to contain_exactly("#{prefix}-app-nginx-static", "#{prefix}-app-mysql")
     end
 
     it "mapping with volumes" do
@@ -144,6 +150,16 @@ RSpec.describe DockerHandler do
       expect(r["#{prefix}-app-con2"]['container_args']['Env']).to contain_exactly(
         "LOCATION=Wellington"
       )
+    end
+
+    it "web container with static IPv6 address" do
+      r = config.config_to_containers('apps', 'web1', 'haproxy')
+      expect(r["#{prefix}-app-haproxy"]['container_args']['NetworkingConfig']['EndpointsConfig']["#{prefix}-network"]['IPAMConfig']['IPv6Address']).to eq('a:b:c:d::2:0:a')
+    end
+
+    it "container without a web IPv6 address" do
+      r = config.config_to_containers('apps', 'web1', 'nginx-static')
+      expect(r["#{prefix}-app-nginx-static"]).to_not have_key('NetworkingConfig')
     end
   end
 
