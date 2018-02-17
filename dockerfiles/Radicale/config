@@ -1,0 +1,10 @@
+[auth]
+type = htpasswd
+htpasswd_filename = /radicale/users
+htpasswd_encryption = bcrypt
+
+[server]
+hosts = 0.0.0.0:8080
+
+[storage]
+filesystem_folder = /radicale/collections
