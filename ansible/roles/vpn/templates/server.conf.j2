@@ -15,6 +15,7 @@ push "route {{ route }}"
 {% endfor %}
 compress lz4-v2
 push "compress lz4-v2"
+client-to-client
 persist-key
 persist-tun
 status /tmp/openvpn-status.log
