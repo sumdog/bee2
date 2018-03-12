@@ -126,6 +126,6 @@ if __name__ == '__main__':
     print('Reloading HAProxy')
     sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     sock.connect('/var/run/docker.sock')
-    sock.sendall(str.encode('POST /containers/{}/kill?signal=HUP HTTP/1.0\r\n'.format(environ['HAPROXY_CONTAINER'])))
+    sock.sendall(str.encode('POST /containers/{}/kill?signal=HUP HTTP/1.0\r\n\n'.format(environ['HAPROXY_CONTAINER'])))
 
     print('Done')
