@@ -1,0 +1,36 @@
+#!/usr/bin/env python3
+
+from os import listdir, system, environ
+import socket
+
+template="""
+/weblogs/{log} {{
+    compress
+    compresscmd xz
+    dateext
+    maxage 365
+    rotate 99
+    size=+1024k
+    notifempty
+    missingok
+    nocreate
+}}
+"""
+
+with open('/etc/logrotate.conf','w') as config:
+    for log in listdir('/weblogs'):
+      if log.endswith('.log'):
+        print('Adding logrotate config for {}'.format(log))
+        config.write(template.format(log=log))
+config.close()
+
+print('Running Logrotate')
+system('/usr/sbin/logrotate /etc/logrotate.conf')
+
+# reload HAProxy
+print('Reloading Nginx')
+sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+sock.connect('/var/run/docker.sock')
+sock.sendall(str.encode('POST /containers/{}/kill?signal=USR1 HTTP/1.0\r\n\n'.format(environ['NGINX_CONTAINER'])))
+
+print('Done')
