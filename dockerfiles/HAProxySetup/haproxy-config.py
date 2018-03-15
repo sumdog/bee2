@@ -29,8 +29,6 @@ defaults
     #errorfile 504 /usr/local/etc/haproxy/errors/504.http
     maxconn 4096
     mode http
-    # Add x-forwarded-for header.
-    option forwardfor
     option http-server-close
 
 frontend http
@@ -50,6 +48,7 @@ frontend https
     bind :::443 v4v6 ssl crt /etc/letsencrypt/live
     mode http
 
+    http-request set-header X-Forwarded-For %[src]
     http-request set-header X-Forwarded-Port %[dst_port]
     http-request add-header X-Forwarded-Proto https if {{ ssl_fc }}
 
