@@ -259,10 +259,18 @@ Usage: bee2 -c <config> -d COMMAND
       elsif val.is_a?(String) and val.start_with?('$')
         ref_container = @config['applications'].select { |a,c| a == val.tr('$', '') }
         if ref_container.nil?
-          @log.error("Could not find reference for #{val} in configuration.")
+          @log.error("Could not find reference for #{val} in app configuration.")
           exit 3
         else
           "#{var.upcase}=#{@prefix}-app-#{ref_container.first[0]}"
+        end
+      elsif val.is_a?(String) and val.start_with?('+')
+        ref_container = @config['jobs'].select { |a,c| a == val.tr('+', '') }
+        if ref_container.nil?
+          @log.error("Could not find reference for #{val} in job configuration.")
+          exit 3
+        else
+          "#{var.upcase}=#{@prefix}-job-#{ref_container.first[0]}"
         end
       else
         "#{var.upcase}=#{val}"

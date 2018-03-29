@@ -20,6 +20,11 @@ RSpec.describe DockerHandler do
           static_web: 2:0:a
   security:
     pgp_id: ABCDEFG
+  jobs:
+    runner:
+      server: web1
+      env:
+        type: task
   applications:
     mail:
       server: web1
@@ -34,6 +39,10 @@ RSpec.describe DockerHandler do
       server: web1
       db:
         - postgres
+    cron:
+      server: web1
+      env:
+        run_container: +runner
     certbot:
       server: web1
       env:
@@ -106,9 +115,19 @@ RSpec.describe DockerHandler do
       expect(host_config).to have_key("#{prefix}-network")
     end
 
-    it "mapping with variables in env referencing other containers" do
+    it "mapping with variables in env referencing other app containers" do
       r = config.config_to_containers('apps', 'web1', 'haproxy')
       expect(r["#{prefix}-app-haproxy"]['container_args']['Env']).to include("CERTBOT_CONTAINER=#{prefix}-app-certbot")
+    end
+
+    it "mapping with variables in env referencing other job containers" do
+      r = config.config_to_containers('apps', 'web1', 'cron')
+      expect(r["#{prefix}-app-cron"]['container_args']['Env']).to include("RUN_CONTAINER=#{prefix}-job-runner")
+    end
+
+    it "job containers should start with job prefix" do
+      r = config.config_to_containers('jobs', 'web1', 'runner')
+      expect(r["#{prefix}-job-runner"]['container_args']['Env']).to include("TYPE=task")
     end
 
     it "mapping with exposed ports" do
