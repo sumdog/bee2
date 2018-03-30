@@ -20,6 +20,6 @@ if __name__ == '__main__':
 
     with open('/etc/crontabs/root', 'w') as ctab:
         for name, cmds in tasks.items():
-            ctab.write('{}\troot\tdocker start {}\n'.format(cmds['schedule'], cmds['container']))
+            ctab.write('{}\tdocker start {}\n'.format(cmds['schedule'], cmds['container']))
 
     execv('/usr/sbin/crond', ['crond', '-f'])
