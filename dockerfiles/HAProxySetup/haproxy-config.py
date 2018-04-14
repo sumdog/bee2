@@ -73,8 +73,9 @@ backend bk_ssl_default
 def ssl_vhosts(domain_map):
     vhosts = ''
     for link,domains in domain_map.items():
-        print(link)
         for domain in domains:
+            if '/' in domain:
+                domain = domain.split('/')[0]
             dsh = domain.replace('.', '_')
             vhosts += """
         acl {}     ssl_fc_sni -i {}
@@ -87,10 +88,13 @@ def ssl_vhosts(domain_map):
 def ssl_backends(domain_map):
     backends = ''
     for link,domains in domain_map.items():
+        port = 8080
+        if '/' in domains[0]:
+            port = domains[0].split('/')[1]
         backends += """
     backend bk_{}
-      server srv_{} {}:8080 init-addr libc,none check
-            """.format(link, link, link)
+      server srv_{} {}:{} init-addr libc,none check
+            """.format(link, link, link, port)
     return backends
 
 def map_domains():

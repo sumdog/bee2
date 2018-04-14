@@ -52,8 +52,8 @@ RSpec.describe DockerHandler do
       server: web1
       env:
         domains:
-          - dyject.com
-          - penguindreams.org
+          - dyject.com/80
+          - penguindreams.org/9000
           - rearviewmirror.cc
     haproxy:
       server: web1
@@ -83,8 +83,8 @@ RSpec.describe DockerHandler do
   describe "domain mapping" do
     it "returns a list of each container and its domains" do
       domains = config.all_domains
-      expect(domains).to contain_exactly(['nginx-static', ['dyject.com',
-        'penguindreams.org', 'rearviewmirror.cc']], ['mail',['mail.penguindreams.org']])
+      expect(domains).to contain_exactly(['nginx-static', ['dyject.com/80',
+        'penguindreams.org/9000', 'rearviewmirror.cc']], ['mail',['mail.penguindreams.org']])
     end
   end
 
@@ -153,7 +153,7 @@ RSpec.describe DockerHandler do
     it "mapping all domains" do
       r = config.config_to_containers('apps', 'web1', 'haproxy')
       expect(r["#{prefix}-app-haproxy"]['container_args']['Env']).to include(
-        "DOMAINS=#{prefix}-app-mail:mail.penguindreams.org #{prefix}-app-nginx-static:dyject.com,penguindreams.org,rearviewmirror.cc"
+        "DOMAINS=#{prefix}-app-mail:mail.penguindreams.org #{prefix}-app-nginx-static:dyject.com/80,penguindreams.org/9000,rearviewmirror.cc"
       )
     end
 

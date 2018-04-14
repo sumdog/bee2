@@ -126,7 +126,7 @@ Usage: bee2 -c <config> -d COMMAND
     @log.info("Backing up volumes #{server}/#{@volumes}")
     FileUtils.mkdir_p(File.join(@backup_dir, server))
     backup_container = create_container(
-      "#{@prefix}-volume-backup", nil, 'app', './dockerfiles/VolumeReader', nil, nil,
+      "#{@prefix}-volume-backup", nil, 'app', './dockerfiles/VolumeReader', nil, nil, nil,
       nil, nil, @volumes
     )
     backup_name = File.join(@backup_dir, server, "#{Time.now.to_i}-volumes.tar")
@@ -158,7 +158,7 @@ Usage: bee2 -c <config> -d COMMAND
       FileUtils.cp_r 'dockerfiles/VolumeWriter/.', temp_dir
       FileUtils.cp(vol_file, File.join(temp_dir, 'restore.tar'))
       restore_container = create_container(
-        "#{@prefix}-volume-restore", nil, 'app', temp_dir, nil, nil,
+        "#{@prefix}-volume-restore", nil, 'app', temp_dir, nil, nil, nil,
         nil, nil, @volumes
       )
       @log.info("Restoring volumes #{date}")
@@ -228,7 +228,7 @@ Usage: bee2 -c <config> -d COMMAND
   def transform_envs(name, envs, cprefix)
     envs.map { |var,val|
       if var == 'domains' and val == 'all'
-        # DOMAINS="bee2-app-name1:example.com,example.org bee2-app-name2:someotherdomain.com"
+        # DOMAINS="bee2-app-name1:example.com,example.org bee2-app-name2:someotherdomain.com/80"
         full_map = all_domains.map { |app,domains|
           "#{@prefix}-app-#{app}:#{domains.join(',')}"
         }.join(' ')
@@ -336,6 +336,7 @@ Usage: bee2 -c <config> -d COMMAND
         tcfg[:prefix],
         build_dir,
         cfg.fetch('git', nil),
+        cfg.fetch('branch', nil),
         cfg.fetch('ports', nil),
         transform_envs(name, cfg.fetch('env', []), tcfg[:prefix]),
         cfg.fetch('volumes', nil),
@@ -344,12 +345,13 @@ Usage: bee2 -c <config> -d COMMAND
     }.inject(&:merge)
   end
 
-  def create_container(name, image, cprefix, build_dir, git, ports, env, volumes, static_ipv6 = nil)
+  def create_container(name, image, cprefix, build_dir, git, branch, ports, env, volumes, static_ipv6 = nil)
     {
      name => {
        'image' => image,
        'build_dir' => build_dir,
        'git' => git,
+       'branch' => branch,
        'container_args' => {
          "RestartPolicy": { "Name": "unless-stopped" },
          'Env' => env,
@@ -387,7 +389,11 @@ Usage: bee2 -c <config> -d COMMAND
         when params.key?('git')
           Dir.mktmpdir {|git_dir|
             @log.info("Git Clone #{params['git']}")
-            Git.clone(params['git'], '.', :path => git_dir)
+            git = Git.clone(params['git'], '.', :path => git_dir)
+            if params.key?('branch')
+              @log.info("Using branch #{params['branch']}")
+              git.branches[params['branch']].checkout()
+            end
             @log.info("Creating Image for #{params['git']}")
             Docker::Image.build_from_dir(git_dir).id
           }

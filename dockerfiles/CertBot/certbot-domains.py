@@ -39,7 +39,11 @@ if __name__ == '__main__':
         sleep(2)
 
     while True:
-        for domain in domains:
+        for d in domains:
+            if '/' in d:
+                domain = d.split('/')[0]
+            else:
+                domain = d
             print('Processing {}'.format(domain))
             cmd = ['/usr/local/bin/certbot', 'certonly', '--standalone',
                    '--preferred-challenges', 'http',

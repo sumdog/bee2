@@ -181,6 +181,11 @@ if __name__ == '__main__':
                                         salt())))
 
     for d in domains:
+
+        # remove port if present
+        if '/' in d:
+            d = d.split('/')[0]
+
         if path.exists(path.join(logs, '{}.log'.format(d))):
             conf = template.format(logs, d, d, d, d, awdata)
             cfile = path.join(awconfig, 'awstats.{}.conf'.format(d))
