@@ -37,6 +37,7 @@ RSpec.describe DockerHandler do
         - mysql
     image-poster:
       server: web1
+      cmd: some_command -a -f -t
       db:
         - postgres
     cron:
@@ -123,6 +124,17 @@ RSpec.describe DockerHandler do
     it "mapping with variables in env referencing other job containers" do
       r = config.config_to_containers('apps', 'web1', 'cron')
       expect(r["#{prefix}-app-cron"]['container_args']['Env']).to include("RUN_CONTAINER=#{prefix}-job-runner")
+    end
+
+    it "specifies a custom command if present" do
+      r = config.config_to_containers('apps', 'web1', 'image-poster')
+      expect(1 == 2)
+      expect(r["#{prefix}-app-image-poster"]['container_args']['Cmd']).to  eq('some_command -a -f -t')
+    end
+
+    it "does not specify a custom command if not present" do
+      r = config.config_to_containers('apps', 'web1', 'cron')
+      expect(r["#{prefix}-app-cron"]['container_args']['Cmd']).to be_nil
     end
 
     it "job containers should start with job prefix" do

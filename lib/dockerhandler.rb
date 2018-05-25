@@ -126,7 +126,7 @@ Usage: bee2 -c <config> -d COMMAND
     @log.info("Backing up volumes #{server}/#{@volumes}")
     FileUtils.mkdir_p(File.join(@backup_dir, server))
     backup_container = create_container(
-      "#{@prefix}-volume-backup", nil, 'app', './dockerfiles/VolumeReader', nil, nil, nil,
+      "#{@prefix}-volume-backup", nil, 'app', nil, './dockerfiles/VolumeReader', nil, nil, nil,
       nil, nil, @volumes
     )
     backup_name = File.join(@backup_dir, server, "#{Time.now.to_i}-volumes.tar")
@@ -158,7 +158,7 @@ Usage: bee2 -c <config> -d COMMAND
       FileUtils.cp_r 'dockerfiles/VolumeWriter/.', temp_dir
       FileUtils.cp(vol_file, File.join(temp_dir, 'restore.tar'))
       restore_container = create_container(
-        "#{@prefix}-volume-restore", nil, 'app', temp_dir, nil, nil, nil,
+        "#{@prefix}-volume-restore", nil, 'app', nil, temp_dir, nil, nil, nil,
         nil, nil, @volumes
       )
       @log.info("Restoring volumes #{date}")
@@ -334,6 +334,7 @@ Usage: bee2 -c <config> -d COMMAND
       create_container("#{@prefix}-#{tcfg[:prefix]}-#{name}",
         cfg.fetch('image', nil),
         tcfg[:prefix],
+        cfg.fetch('cmd', nil),
         build_dir,
         cfg.fetch('git', nil),
         cfg.fetch('branch', nil),
@@ -345,7 +346,7 @@ Usage: bee2 -c <config> -d COMMAND
     }.inject(&:merge)
   end
 
-  def create_container(name, image, cprefix, build_dir, git, branch, ports, env, volumes, static_ipv6 = nil)
+  def create_container(name, image, cprefix, cmd, build_dir, git, branch, ports, env, volumes, static_ipv6 = nil)
     {
      name => {
        'image' => image,
@@ -355,6 +356,7 @@ Usage: bee2 -c <config> -d COMMAND
        'container_args' => {
          "RestartPolicy": { "Name": "unless-stopped" },
          'Env' => env,
+         'Cmd' => cmd,
          'NetworkingConfig' =>
            {'EndpointsConfig' =>
              {@network =>
