@@ -88,6 +88,7 @@ class VultrProvisioner
     ensure_servers
     update_dns
     cleanup_dns
+    mail_dns
     write_inventory
 
     # Per ticket TTD-04IGO, removing auto assigned IPv6 addresses is impossible via the API
@@ -156,6 +157,32 @@ class VultrProvisioner
           @log.info("Removing #{record['type']} #{record['name']}.#{domain['domain']}")
           request('POST', 'dns/delete_record', { 'RECORDID' => record['RECORDID'], 'domain' => domain['domain']})
         end
+      }
+    }
+  end
+
+  def mail_dns()
+    @servers.select { |srv, cfg| cfg.key?('mail') }.each { |server, config|
+
+      # reverse DNS
+      subid = @state['servers'][server]['SUBID']
+      ipv4 = @state['servers'][server]['ipv4']['addr']
+      ipv6 = @state['servers'][server]['ipv6']['addr']
+      @log.info("Creating Reverse DNS for Mail records #{ipv4}/#{ipv6} to #{config['mail']['mx']}")
+      request('POST', 'server/reverse_set_ipv4', { 'SUBID' => subid, 'ip' => ipv4, 'entry' => config['mail']['mx']})
+      request('POST', 'server/reverse_set_ipv6', { 'SUBID' => subid, 'ip' => ipv6, 'entry' => config['mail']['mx']})
+
+      security = config['mail']['security']
+      config['mail']['domains'].each { |domain|
+        [
+          {'domain' => domain, 'name' => 'mail', 'type' => 'MX', 'data' => config['mail']['mx'], 'priority' => 10 },
+          {'domain' => domain, 'name' => '_dmarc', 'type' => 'TXT', 'data' => "\"#{security['dmarc']}\"" },
+          {'domain' => domain, 'name' => 'dkim1._domainkey', 'type' => 'TXT', 'data' => "\"#{security['dkim']}\"" },
+          {'domain' => domain, 'name' => '', 'type' => 'TXT', 'data' => "\"#{security['spf']}\"" }
+        ].each { |d|
+          @log.info("Creating/Updating Mail Record #{d['name']}.#{d['domain']} #{d['type']} #{d['data']}")
+          dns_update_check(d)
+        }
       }
     }
   end
