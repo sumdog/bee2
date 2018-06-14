@@ -1,0 +1,18 @@
+# {{ ansible_managed }}
+
+set skip on lo
+
+block all
+
+# allow all from host itself
+pass out inet all keep state
+pass out inet6 all keep state
+
+pass in on {{ private_eth }} from any to any
+pass in on egress proto tcp from any to any port smtp
+pass in on egress proto tcp from any to any port smtps
+pass in on egress proto tcp from any to any port submission
+pass in on egress proto tcp from any to any port imaps
+
+# Port build user does not need network
+block return out log proto {tcp udp} user _pbuild

@@ -1,0 +1,17 @@
+---
+- name: Install required packages
+  openbsd_pkg:
+    name: "{{ item }}"
+    state: present
+  with_items: ['dovecot', 'dkim-milter', 'dkimproxy', 'certbot', 'procmail']
+
+- name: Create domains file
+  template: src=vdomains.j2 dest={{ vdoms_file }}
+
+- name: Create users file
+  template: src=vusers.j2 dest={{ vusers_file }}
+
+- name: Added e-mail users to system
+  user:
+    name: "{{ item }}"
+  with_items: "{{ users.keys() | list }}"

@@ -1,0 +1,12 @@
+# pki mx.domain.tld certificate  "/etc/smtpd/tls/smtpd.crt"
+# pki mx.domain.tld key          "/etc/smtpd/tls/smtpd.key"
+
+# table creds                    "/etc/smtpd/creds"
+table vdoms                    "{{ vdoms_file }}"
+table vusers                   "{{ vusers_file }}"
+
+# listen on eth0 tls pki mx.domain.tld
+# listen on eth0 port 587 tls-require pki mx.domain.tld auth <creds>
+
+accept from any for domain <vdoms> virtual <vusers> deliver to maildir
+accept for any relay

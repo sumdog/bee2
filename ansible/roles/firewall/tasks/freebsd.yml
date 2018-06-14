@@ -1,7 +1,7 @@
 ---
   - name: Copy Firewall Configuration
     template:
-      src: pf.conf.j2
+      src: pf.conf-freebsd.j2
       dest: /etc/pf.conf
       validate: 'pfctl -n -f %s'
     notify: reload pf

@@ -172,13 +172,12 @@ class VultrProvisioner
       request('POST', 'server/reverse_set_ipv4', { 'SUBID' => subid, 'ip' => ipv4, 'entry' => config['mail']['mx']})
       request('POST', 'server/reverse_set_ipv6', { 'SUBID' => subid, 'ip' => ipv6, 'entry' => config['mail']['mx']})
 
-      security = config['mail']['security']
       config['mail']['domains'].each { |domain|
         [
           {'domain' => domain, 'name' => 'mail', 'type' => 'MX', 'data' => config['mail']['mx'], 'priority' => 10 },
-          {'domain' => domain, 'name' => '_dmarc', 'type' => 'TXT', 'data' => "\"#{security['dmarc']}\"" },
-          {'domain' => domain, 'name' => 'dkim1._domainkey', 'type' => 'TXT', 'data' => "\"#{security['dkim']}\"" },
-          {'domain' => domain, 'name' => '', 'type' => 'TXT', 'data' => "\"#{security['spf']}\"" }
+          {'domain' => domain, 'name' => '_dmarc', 'type' => 'TXT', 'data' => "\"#{config['mail']['dmarc']}\"" },
+          {'domain' => domain, 'name' => 'dkim1._domainkey', 'type' => 'TXT', 'data' => "\"#{config['mail']['dkim']}\"" },
+          {'domain' => domain, 'name' => '', 'type' => 'TXT', 'data' => "\"#{config['mail']['spf']}\"" }
         ].each { |d|
           @log.info("Creating/Updating Mail Record #{d['name']}.#{d['domain']} #{d['type']} #{d['data']}")
           dns_update_check(d)

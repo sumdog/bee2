@@ -4,3 +4,5 @@
   - include_tasks: freebsd.yml
     when: ansible_distribution == 'FreeBSD'
   - meta: flush_handlers
+  - include_tasks: openbsd.yml
+    when: ansible_distribution == 'OpenBSD'

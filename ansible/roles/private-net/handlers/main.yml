@@ -2,3 +2,5 @@
   service: name=netif enabled=yes state=restarted args={{ private_eth }}
 - name: restart networking
   service: name=networking  enabled=yes state=restarted
+- name: run netstart
+  command: sh /etc/netstart

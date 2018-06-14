@@ -1,0 +1,5 @@
+{% for user,emails in users.items() %}
+{% for email in emails %}
+{{email}} {{user}}
+{% endfor %}
+{% endfor %}

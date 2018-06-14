@@ -1,1 +1,2 @@
 docker_ipv6_web: "{{ state.servers[ansible_hostname].ipv6.subnet }}{{ servers[ansible_hostname].ipv6.docker.static_web }}"
+openbsd_mirror: https://mirror.vdms.io/pub/OpenBSD/

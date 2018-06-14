@@ -5,3 +5,5 @@
   async: 0
   poll: 10
   ignore_errors: true
+- name: load openbsd-pf
+  command: pfctl -f /etc/pf.conf

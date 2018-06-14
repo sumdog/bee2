@@ -1,0 +1,7 @@
+---
+  - name: Copy Firewall Configuration
+    template:
+      src: pf.conf-openbsd.j2
+      dest: /etc/pf.conf
+      validate: 'pfctl -n -f %s'
+    notify: load openbsd-pf

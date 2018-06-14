@@ -14,5 +14,11 @@
       - include_tasks: freebsd.yml
     when: ansible_distribution == 'FreeBSD'
 
+  - name: OpenBSD Private Networking
+    block:
+      - set_fact: private_eth=vio1
+      - include_tasks: openbsd.yml
+    when: ansible_distribution == 'OpenBSD'
+
   # Private network needs to be setup before Firewall handlers run
   - meta: flush_handlers

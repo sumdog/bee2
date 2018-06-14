@@ -1,0 +1,23 @@
+---
+- name: Setup Mirror
+  raw: "echo {{ openbsd_mirror }} > /etc/installurl"
+
+- name: Install colorls
+  openbsd_pkg:
+    name: colorls
+    state: present
+
+- name: Setup colorls alias
+  lineinfile:
+    dest: /root/.profile
+    line: "alias ls='colorls -FGa'"
+    regexp: "^alias ls='colorls -FGa'$"
+    state: present
+    insertafter: EOF
+    create: True
+
+# - name: Install tools
+#   openbsd_pkg:
+#     name: "{{ item }}"
+#     state: present
+#   with_items: ['vim']

@@ -1,0 +1,9 @@
+---
+security:
+  dkim: "{{ servers[ansible_hostname].mail.security.dkim }}"
+  spf: "{{ servers[ansible_hostname].mail.security.spf }}"
+  dmarc: "{{ servers[ansible_hostname].mail.security.dmarc }}"
+domains: "{{ servers[ansible_hostname].mail.domains }}"
+users: "{{ servers[ansible_hostname].mail.users }}"
+vusers_file: /etc/mail/vusers
+vdoms_file: /etc/mail/vdomains

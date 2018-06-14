@@ -1,0 +1,7 @@
+---
+  - name: Setup Private Network
+    copy:
+      content: "inet {{ private_ip }} 255.255.255.0\n!route add -net {{ openvpn.server.subnet }}/24 {{ openvpn.hosts.gateway }}\n"
+      dest: "/etc/hostname.{{ private_eth  }}"
+      force: no
+    notify: run netstart
