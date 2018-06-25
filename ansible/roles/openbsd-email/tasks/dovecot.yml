@@ -1,0 +1,13 @@
+---
+- name: Configure Dovecot for SSL
+  lineinfile: dest=/etc/dovecot/conf.d/10-ssl.conf regexp="{{ item.regexp }}" line="{{ item.line }}"
+  with_items:
+      - { regexp: "^#?ssl =", line: "ssl = required" }
+      - { regexp: "^#?ssl_cert =", line: "ssl_cert = <{{ tls_cert }}" }
+      - { regexp: "^#?ssl_key =", line: "ssl_key = <{{ tls_key }}" }
+
+- name: Dovecot Mail storage configuration
+  lineinfile: dest=/etc/dovecot/conf.d/10-mail.conf regexp="^#?mail_location" line="mail_location = maildir:~/Mail"
+
+- name: Configure Dovecot IMAP
+  lineinfile: dest=/etc/dovecot/dovecot.conf regexp="^#?protocols =" line="protocols = imap"

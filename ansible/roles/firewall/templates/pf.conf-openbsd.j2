@@ -9,6 +9,7 @@ pass out inet all keep state
 pass out inet6 all keep state
 
 pass in on {{ private_eth }} from any to any
+pass in on egress proto tcp from any to any port http
 pass in on egress proto tcp from any to any port smtp
 pass in on egress proto tcp from any to any port smtps
 pass in on egress proto tcp from any to any port submission

@@ -1,12 +1,18 @@
-# pki mx.domain.tld certificate  "/etc/smtpd/tls/smtpd.crt"
-# pki mx.domain.tld key          "/etc/smtpd/tls/smtpd.key"
+pki {{ mx }} key "{{ tls_key }}"
+pki {{ mx }} certificate "{{ tls_cert }}"
 
-# table creds                    "/etc/smtpd/creds"
-table vdoms                    "{{ vdoms_file }}"
-table vusers                   "{{ vusers_file }}"
+table vdoms  "{{ vdoms_file }}"
+table vusers "{{ vusers_file }}"
 
-# listen on eth0 tls pki mx.domain.tld
-# listen on eth0 port 587 tls-require pki mx.domain.tld auth <creds>
+listen on lo0 port {{ ports.spampd_return}} tag SPAMD
+listen on lo0 port {{ ports.clam_return }} tag CLAM_IN
 
-accept from any for domain <vdoms> virtual <vusers> deliver to maildir
-accept for any relay
+listen on egress port smtp tls pki {{ mx }}
+listen on egress port submission tls-require pki {{ mx }} auth
+
+accept tagged CLAM_IN for domain <vdoms> virtual <vusers> deliver to mda "procmail -f -"
+#accept tagged CLAM_IN for any deliver to maildir
+accept tagged SPAMD for any relay via "smtp://127.0.0.1:{{ ports.clam_in }}"
+accept from any for domain <vdoms> relay via "smtp://127.0.0.1:{{ ports.spampd_in }}"
+
+accept from local for any relay

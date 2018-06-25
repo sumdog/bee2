@@ -5,5 +5,19 @@ security:
   dmarc: "{{ servers[ansible_hostname].mail.security.dmarc }}"
 domains: "{{ servers[ansible_hostname].mail.domains }}"
 users: "{{ servers[ansible_hostname].mail.users }}"
+mx: "{{ servers[ansible_hostname].mail.mx }}"
+cert_email: "{{ servers[ansible_hostname].mail.cert_email }}"
 vusers_file: /etc/mail/vusers
 vdoms_file: /etc/mail/vdomains
+domains_csv: "{{ domains | join(', ') }}"
+local_dkim_key: "{{ servers[ansible_hostname].mail.dkim_private }}"
+cert_script: /usr/local/bin/get_certs
+tls_key: /etc/letsencrypt/live/{{ mx }}/privkey.pem
+tls_cert: /etc/letsencrypt/live/{{ mx }}/chain.pem
+ports:
+  spampd_in: 10025
+  clam_in: 10026
+  spampd_return: 10027
+  clam_return: 10028
+  dkim_in: 10029
+  dkim_return: 10030

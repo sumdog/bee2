@@ -1,0 +1,11 @@
+LOGFILE="$HOME/procmail.log"
+MAILDIR="$HOME/Mail/"
+DEFAULT="$HOME/Mail/"
+DELIVER="/usr/local/libexec/dovecot/deliver"
+
+:0 w
+* ^X-Spam-Status: Yes
+| $DELIVER -m Spam
+
+:0 w
+| $DELIVER

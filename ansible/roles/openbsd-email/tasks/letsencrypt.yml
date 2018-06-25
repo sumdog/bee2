@@ -1,0 +1,20 @@
+---
+- name: Install Certbot deploy hook
+  template: src=certbot-deploy-hook.sh dest=/usr/local/bin/certbot-deploy-hook.sh mode=0700
+
+- name: Install Certbot Renew Script
+  template: src=get_certs.sh.j2 dest={{ cert_script }} mode=0700
+
+- name: Certbot Cron
+  cron:
+    cron_file: /etc/crontab
+    user: root
+    name: "certbot renew"
+    minute: "0"
+    hour: "2"
+    job: "{{ cert_script }}"
+
+- name: Ensure LetsEncrypt Certs
+  command: "{{ cert_script }}"
+  args:
+    creates: "{{ tls_cert }}"

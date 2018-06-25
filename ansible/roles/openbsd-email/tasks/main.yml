@@ -3,7 +3,16 @@
   openbsd_pkg:
     name: "{{ item }}"
     state: present
-  with_items: ['dovecot', 'dkim-milter', 'dkimproxy', 'certbot', 'procmail']
+  with_items: ['dovecot', 'dkimproxy', 'certbot', 'procmail', 'spampd', 'clamsmtp']
+
+- name: ClamAV Tasks
+  include_tasks: clamav.yml
+
+- name: Dovecot Tasks
+  include_tasks: dovecot.yml
+
+- name: Lets Encrypt Tasks
+  include_tasks: letsencrypt.yml
 
 - name: Create domains file
   template: src=vdomains.j2 dest={{ vdoms_file }}
@@ -11,7 +20,45 @@
 - name: Create users file
   template: src=vusers.j2 dest={{ vusers_file }}
 
+- name: Setup OpenSMTPD
+  template: src=smtpd.conf.j2 dest=/etc/mail/smtpd.conf
+
 - name: Added e-mail users to system
   user:
     name: "{{ item }}"
   with_items: "{{ users.keys() | list }}"
+
+- name: Setup Procmail for users
+  template:
+    src: user.procmailrc.j2
+    dest: "/home/{{ item }}/.procmailrc"
+    owner: "{{ item }}"
+    group: "{{ item }}"
+    mode: 0644
+    force: no
+  with_items: "{{ users.keys() | list }}"
+
+- name: Add users Maildir
+  file:
+    path: /home/{{ item }}/Mail
+    state: directory
+    owner: "{{ item }}"
+    group: "{{ item }}"
+    mode: 0700
+  with_items: "{{ users.keys() | list }}"
+
+- name: Setup DKIM Proxy
+  template: src=proxy_out.conf.j2 dest=/etc/dkimproxy_out.conf
+
+- name: Copy DKIM Key
+  copy: src={{ local_dkim_key }} dest=/etc/dkim.key
+
+- name: Setup assassin
+  template: src=spamassassin-local.cf.j2 dest=/etc/mail/spamassassin/local.cf
+
+- name: Setup RC Flags for spampd
+  command: "rcctl set spampd flags --port={{ ports.spampd_in }} --relayhost=127.0.0.1:{{ ports.spampd_return }} --tagall -aw"
+
+- name: Start/Enable Services
+  command: "rcctl enable {{ item }}"
+  with_items: ['freshclam', 'clamd', 'cron', 'clamsmtpd', 'spamassassin', 'dkimproxy_out', 'spampd', 'smtpd', 'dovecot']

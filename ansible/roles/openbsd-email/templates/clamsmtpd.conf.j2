@@ -1,0 +1,9 @@
+OutAddress: {{ ports.clam_return }}
+Listen: 0.0.0.0:{{ ports.clam_in }}
+ClamAddress: /tmp/clamd.socket
+Header: X-Virus-Scanned: ClamAV using ClamSMTP
+TempDirectory: /tmp
+Action: drop
+Quarantine: on
+TransparentProxy: off
+User: _clamav

@@ -1,0 +1,19 @@
+---
+- name: Setup Freshcalm
+  template: src=freshclam.conf.j2 dest=/etc/freshclam.conf
+
+- name: Setup Clamsmtpd
+  template: src=clamsmtpd.conf.j2 dest=/etc/clamsmtpd.conf
+
+- name: Create Clamsmtpd RC script
+  template: src=clamsmtpd.rc dest=/etc/rc.d/clamsmtpd mode=0555
+
+- name: Fix Clamd var/lib permissions
+  file:
+    path: /var/spampd/.spamassassin
+    state: directory
+    group: _spampd
+    mode: 0770
+
+- name: Setup Clamd
+  template: src=clamd.conf.j2 dest=/etc/clamd.conf

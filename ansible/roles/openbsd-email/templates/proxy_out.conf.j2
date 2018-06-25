@@ -1,0 +1,7 @@
+listen    127.0.0.1:{{ ports.dkim_in }}
+relay     127.0.0.1:{{ ports.dkim_return }}
+domain    {{ domains_csv }}
+signature dkim(c=relaxed)
+signature domainkeys(c=nofws)
+keyfile   /etc/dkim.key
+selector  dkim1
