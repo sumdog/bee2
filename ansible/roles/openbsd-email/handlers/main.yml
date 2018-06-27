@@ -1,0 +1,16 @@
+- name: Reload OpenSMTPD
+  command: rcctl restart smtpd
+- name: Reload clamsmtpd
+  command: rcctl restart clamsmtpd
+- name: Reload clamd
+  command: rcctl restart clamd
+- name: Reload freshclam
+  command: rcctl restart freshclam
+- name: Reload dkimproxy
+  command: rcctl restart dkimproxy_out
+- name: Reload spampd
+  command: rcctl restart spampd
+- name: Reload smtpd
+  command: rcctl restart smtpd
+- name: Reload dovecot
+  command: rcctl restart dovecot

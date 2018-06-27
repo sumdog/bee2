@@ -14,14 +14,14 @@
 - name: Lets Encrypt Tasks
   include_tasks: letsencrypt.yml
 
-- name: Create domains file
-  template: src=vdomains.j2 dest={{ vdoms_file }}
+- name: Spam Prevention Tasks
+  include_tasks: spam.yml
 
-- name: Create users file
-  template: src=vusers.j2 dest={{ vusers_file }}
+- name: DKIM Tasks
+  include_tasks: dkim.yml
 
-- name: Setup OpenSMTPD
-  template: src=smtpd.conf.j2 dest=/etc/mail/smtpd.conf
+- name: OpenSMTPD Tasks
+  include_tasks: opensmtpd.yml
 
 - name: Added e-mail users to system
   user:
@@ -47,18 +47,6 @@
     mode: 0700
   with_items: "{{ users.keys() | list }}"
 
-- name: Setup DKIM Proxy
-  template: src=proxy_out.conf.j2 dest=/etc/dkimproxy_out.conf
-
-- name: Copy DKIM Key
-  copy: src={{ local_dkim_key }} dest=/etc/dkim.key
-
-- name: Setup assassin
-  template: src=spamassassin-local.cf.j2 dest=/etc/mail/spamassassin/local.cf
-
-- name: Setup RC Flags for spampd
-  command: "rcctl set spampd flags --port={{ ports.spampd_in }} --relayhost=127.0.0.1:{{ ports.spampd_return }} --tagall -aw"
-
-- name: Start/Enable Services
+- name: Enable Services
   command: "rcctl enable {{ item }}"
-  with_items: ['freshclam', 'clamd', 'cron', 'clamsmtpd', 'spamassassin', 'dkimproxy_out', 'spampd', 'smtpd', 'dovecot']
+  with_items: ['freshclam', 'clamd', 'cron', 'clamsmtpd', 'dkimproxy_out', 'spampd', 'smtpd', 'dovecot']

@@ -1,0 +1,10 @@
+- name: Setup assassin
+  template: src=spamassassin-local.cf.j2 dest=/etc/mail/spamassassin/local.cf
+
+- name: Setup RC Flags for spampd
+  lineinfile:
+      dest: /etc/rc.conf.local
+      regexp: ^spampd_flags
+      line: "spampd_flags=\"--port={{ ports.spampd_in }} --relayhost=127.0.0.1:{{ ports.spampd_return }} --tagall -aw\""
+      create: Yes
+  notify: Reload spampd

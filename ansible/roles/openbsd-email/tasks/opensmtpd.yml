@@ -1,0 +1,12 @@
+---
+- name: Create domains file
+  template: src=vdomains.j2 dest={{ vdoms_file }}
+  notify: Reload OpenSMTPD
+
+- name: Create users file
+  template: src=vusers.j2 dest={{ vusers_file }}
+  notify: Reload OpenSMTPD
+
+- name: Setup OpenSMTPD
+  template: src=smtpd.conf.j2 dest=/etc/mail/smtpd.conf
+  notify: Reload OpenSMTPD

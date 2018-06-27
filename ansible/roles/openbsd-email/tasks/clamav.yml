@@ -1,12 +1,18 @@
 ---
 - name: Setup Freshcalm
   template: src=freshclam.conf.j2 dest=/etc/freshclam.conf
+  notify: Reload freshclam
 
-- name: Setup Clamsmtpd
-  template: src=clamsmtpd.conf.j2 dest=/etc/clamsmtpd.conf
+- name: Run Freshcalm if there's no AV database
+  command: /usr/local/bin/freshclam
+  creates: /var/db/clamav/main.cvd
 
 - name: Create Clamsmtpd RC script
   template: src=clamsmtpd.rc dest=/etc/rc.d/clamsmtpd mode=0555
+
+- name: Setup Clamsmtpd
+  template: src=clamsmtpd.conf.j2 dest=/etc/clamsmtpd.conf
+  notify: Reload clamsmtpd
 
 - name: Fix Clamd var/lib permissions
   file:
@@ -17,3 +23,4 @@
 
 - name: Setup Clamd
   template: src=clamd.conf.j2 dest=/etc/clamd.conf
+  notify: Reload clamd

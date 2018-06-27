@@ -1,0 +1,8 @@
+---
+- name: Setup DKIM Proxy
+  template: src=proxy_out.conf.j2 dest=/etc/dkimproxy_out.conf
+  notify: Reload dkimproxy
+
+- name: Copy DKIM Key
+  copy: src={{ local_dkim_key }} dest=/etc/dkim.key
+  notify: Reload dkimproxy

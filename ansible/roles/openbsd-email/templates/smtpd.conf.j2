@@ -8,6 +8,7 @@ listen on lo0 port {{ ports.spampd_return}} tag SPAMD
 listen on lo0 port {{ ports.clam_return }} tag CLAM_IN
 
 listen on egress port smtp tls pki {{ mx }}
+listen on egress port 465 smtps pki {{ mx }}
 listen on egress port submission tls-require pki {{ mx }} auth
 
 accept tagged CLAM_IN for domain <vdoms> virtual <vusers> deliver to mda "procmail -f -"
