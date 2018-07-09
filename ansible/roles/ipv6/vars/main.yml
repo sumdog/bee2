@@ -1,0 +1,2 @@
+provisioner_state_file: "../{{ provisioner.state_file }}"
+ipv6_alias: "{{ state.servers[ansible_hostname].ipv6.addr }}"

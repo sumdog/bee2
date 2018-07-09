@@ -7,6 +7,7 @@
   roles:
     - root-password
     - private-net
-    - firewall
     - openbsd-basic
     - openbsd-email
+    - ipv6
+    - firewall

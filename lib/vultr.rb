@@ -5,6 +5,8 @@ require 'net/https'
 require 'uri'
 require 'cgi'
 require 'json'
+require 'openssl'
+require 'base64'
 
 class VultrProvisioner
 
@@ -172,11 +174,15 @@ class VultrProvisioner
       request('POST', 'server/reverse_set_ipv4', { 'SUBID' => subid, 'ip' => ipv4, 'entry' => config['mail']['mx']})
       request('POST', 'server/reverse_set_ipv6', { 'SUBID' => subid, 'ip' => ipv6, 'entry' => config['mail']['mx']})
 
+      dkim_key = OpenSSL::PKey::RSA.new(File.read(config['mail']['dkim_private']))
+      b64_key = Base64.strict_encode64(dkim_key.public_key.to_der)
+      dkim_dns = "k=rsa; t=s; p=#{b64_key}"
+
       config['mail']['domains'].each { |domain|
         [
-          {'domain' => domain, 'name' => 'mail', 'type' => 'MX', 'data' => config['mail']['mx'], 'priority' => 10 },
+          {'domain' => domain, 'name' => '', 'type' => 'MX', 'data' => config['mail']['mx'], 'priority' => 10 },
           {'domain' => domain, 'name' => '_dmarc', 'type' => 'TXT', 'data' => "\"#{config['mail']['dmarc']}\"" },
-          {'domain' => domain, 'name' => 'dkim1._domainkey', 'type' => 'TXT', 'data' => "\"#{config['mail']['dkim']}\"" },
+          {'domain' => domain, 'name' => 'dkim1._domainkey', 'type' => 'TXT', 'data' => "\"#{dkim_dns}\"" },
           {'domain' => domain, 'name' => '', 'type' => 'TXT', 'data' => "\"#{config['mail']['spf']}\"" }
         ].each { |d|
           @log.info("Creating/Updating Mail Record #{d['name']}.#{d['domain']} #{d['type']} #{d['data']}")
@@ -226,9 +232,11 @@ class VultrProvisioner
           domain_records(records).each { |domain, subdomains|
             request('GET', 'dns/records', {'domain' => domain}, -> {
               @log.info("Domain #{domain} exists")
-
-              dns_update_check({'domain' => domain, 'name' => '', 'type' => 'A', 'data' => ipv4 })
-              dns_update_check({'domain' => domain, 'name' => '', 'type' => 'AAAA', 'data' => ipv6 })
+              if ds_type == 'web'
+                  dns_update_check({'domain' => domain, 'name' => '', 'type' => 'A', 'data' => ipv4 })
+                  dns_update_check({'domain' => domain, 'name' => '', 'type' => 'AAAA', 'data' => ipv6 })
+                  create_subdomains(['www'], domain, config, ['ipv4', 'ipv6-web'])
+              end
               create_subdomains(subdomains, domain, config, typ_cfg)
             }, 412, -> {
               @log.info("No records for #{domain}. Creating Base Record.")

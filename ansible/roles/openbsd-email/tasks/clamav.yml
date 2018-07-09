@@ -5,7 +5,8 @@
 
 - name: Run Freshcalm if there's no AV database
   command: /usr/local/bin/freshclam
-  creates: /var/db/clamav/main.cvd
+  args:
+    creates: /var/db/clamav/main.cvd
 
 - name: Create Clamsmtpd RC script
   template: src=clamsmtpd.rc dest=/etc/rc.d/clamsmtpd mode=0555

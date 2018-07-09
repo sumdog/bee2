@@ -1,0 +1,17 @@
+---
+# - name: FreeBSD IPv6
+#   block:
+#     - set_fact: private_eth=vtnet1
+#     - include_tasks: freebsd.yml
+#   when: ansible_distribution == 'FreeBSD'
+- name: Load State for IPv6
+  include_vars:
+    file: "{{ provisioner_state_file }}"
+    name: state
+
+- name: OpenBSD IPv6
+  lineinfile:
+    dest: /etc/hostname.vio0
+    regexp: ^inet6 alias"
+    line: "inet6 alias {{ ipv6_alias }} 64"
+  notify: run netstart

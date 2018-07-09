@@ -49,4 +49,8 @@
 
 - name: Enable Services
   command: "rcctl enable {{ item }}"
-  with_items: ['freshclam', 'clamd', 'cron', 'clamsmtpd', 'dkimproxy_out', 'spampd', 'smtpd', 'dovecot']
+  with_items: ['freshclam', 'clamd', 'cron', 'clamsmtpd', 'dkimproxy_out', 'spampd_custom', 'smtpd', 'dovecot']
+
+- name: Start Services
+  command: "/etc/rc.d/{{ item }} start"
+  with_items: ['freshclam', 'clamd', 'cron', 'clamsmtpd', 'dkimproxy_out', 'spampd_custom', 'smtpd', 'dovecot']

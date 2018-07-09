@@ -1,0 +1,7 @@
+#!/bin/ksh
+
+daemon="/usr/local/sbin/spampd --port={{ ports.spampd_in }} --relayhost=127.0.0.1:{{ ports.spampd_return }} --tagall -aw"
+
+. /etc/rc.d/rc.subr
+
+rc_cmd $1

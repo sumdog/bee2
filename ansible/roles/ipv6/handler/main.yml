@@ -1,0 +1,2 @@
+- name: run netstart
+  command: sh /etc/netstart

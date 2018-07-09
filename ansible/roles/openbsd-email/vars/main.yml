@@ -10,7 +10,7 @@ cert_email: "{{ servers[ansible_hostname].mail.cert_email }}"
 vusers_file: /etc/mail/vusers
 vdoms_file: /etc/mail/vdomains
 domains_csv: "{{ domains | join(', ') }}"
-local_dkim_key: "{{ servers[ansible_hostname].mail.dkim_private }}"
+local_dkim_key: "../{{ servers[ansible_hostname].mail.dkim_private }}"
 cert_script: /usr/local/bin/get_certs
 tls_key: /etc/letsencrypt/live/{{ mx }}/privkey.pem
 tls_cert: /etc/letsencrypt/live/{{ mx }}/chain.pem
