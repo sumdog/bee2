@@ -7,6 +7,16 @@
       - { regexp: "^#?ssl_key =", line: "ssl_key = <{{ tls_key }}" }
   notify: Reload dovecot
 
+- name: Increase file limits for dovecot
+  blockinfile:
+    path: /etc/login.conf
+    block: |
+       dovecot:\
+                :openfiles-cur=20000:\
+                :openfiles-max=20000:\
+                :tc=daemon:
+  notify: rebuild login.conf
+
 - name: Dovecot Mail storage configuration
   lineinfile: dest=/etc/dovecot/conf.d/10-mail.conf regexp="^#?mail_location" line="mail_location = maildir:~/Mail"
   notify: Reload dovecot

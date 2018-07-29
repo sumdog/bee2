@@ -4,6 +4,8 @@ set skip on lo
 
 block all
 
+pass in quick on egress inet6 proto ipv6-icmp
+
 # allow all from host itself
 pass out inet all keep state
 pass out inet6 all keep state
@@ -13,6 +15,7 @@ pass in on egress proto tcp from any to any port http
 pass in on egress proto tcp from any to any port smtp
 pass in on egress proto tcp from any to any port smtps
 pass in on egress proto tcp from any to any port submission
+pass in on egress proto tcp from any to any port imap
 pass in on egress proto tcp from any to any port imaps
 
 # Port build user does not need network

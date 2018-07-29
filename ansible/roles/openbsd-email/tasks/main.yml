@@ -26,6 +26,7 @@
 - name: Added e-mail users to system
   user:
     name: "{{ item }}"
+    shell: /usr/local/bin/fish
   with_items: "{{ users.keys() | list }}"
 
 - name: Setup Procmail for users
@@ -49,8 +50,8 @@
 
 - name: Enable Services
   command: "rcctl enable {{ item }}"
-  with_items: ['freshclam', 'clamd', 'cron', 'clamsmtpd', 'dkimproxy_out', 'spampd_custom', 'smtpd', 'dovecot']
+  with_items: ['freshclam', 'clamd', 'cron', 'clamsmtpd', 'dkimproxy_out', 'smtpd', 'dovecot']
 
 - name: Start Services
   command: "/etc/rc.d/{{ item }} start"
-  with_items: ['freshclam', 'clamd', 'cron', 'clamsmtpd', 'dkimproxy_out', 'spampd_custom', 'smtpd', 'dovecot']
+  with_items: ['freshclam', 'clamd', 'cron', 'clamsmtpd', 'dkimproxy_out', 'spampd', 'smtpd', 'dovecot']

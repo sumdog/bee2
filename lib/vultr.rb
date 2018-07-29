@@ -136,7 +136,7 @@ class VultrProvisioner
   end
 
   private def dns_update_check(r)
-    current = request('GET', 'dns/records', {'domain' => r['domain']}).find{ |c| c['type'] == r['type'] and c['name'] == r['name'] }
+    current = request('GET', 'dns/records', {'domain' => r['domain']}).find{ |c| c['type'] == r['type'] and c['name'] == r['name'] and c['data'] == r['data'] }
     msg = "Domain: #{r['domain']}, Name: #{r['name']}, Type: #{r['type']}"
     if current.nil?
       request('POST', 'dns/create_record', r)
@@ -169,10 +169,25 @@ class VultrProvisioner
       # reverse DNS
       subid = @state['servers'][server]['SUBID']
       ipv4 = @state['servers'][server]['ipv4']['addr']
-      ipv6 = @state['servers'][server]['ipv6']['addr']
-      @log.info("Creating Reverse DNS for Mail records #{ipv4}/#{ipv6} to #{config['mail']['mx']}")
+
+      # Get Vult's auto assigned IPv6 Address, and our reserved on
+      rec = domain_records([config['mail']['mx']]).first
+      request('GET', 'server/list_ipv6', { 'SUBID' => subid })[subid].each { |addrs|
+        # This is really hacky. I hate how Vultr assigns you an IPv6 Address you cannot remove.
+        # For mail and only mail servers, we create a AAAA records for both of the IPs.
+
+        @log.info("Creating/Updating AAAA mail server record for IPv6 #{addrs['ip']} :: #{rec[1].first}.#{rec[0]} AAAA")
+        dns_update_check({'domain' => rec[0], 'name' => rec[1].first, 'type' => 'AAAA', 'data' => addrs['ip'] })
+
+        @log.info("Creating Reverse DNS for Mail records #{addrs['ip']} to #{config['mail']['mx']}")
+        request('POST', 'server/reverse_set_ipv6', { 'SUBID' => subid, 'ip' => addrs['ip'], 'entry' => config['mail']['mx']})
+      }
+
+      @log.info("Creating/Updating A mail server record for IPv4 #{ipv4} :: #{rec[1].first}.#{rec[0]} ")
+      dns_update_check({'domain' => rec[0], 'name' => rec[1].first, 'type' => 'A', 'data' => ipv4 })
+
+      @log.info("Creating Reverse DNS for Mail records #{ipv4} to #{config['mail']['mx']}")
       request('POST', 'server/reverse_set_ipv4', { 'SUBID' => subid, 'ip' => ipv4, 'entry' => config['mail']['mx']})
-      request('POST', 'server/reverse_set_ipv6', { 'SUBID' => subid, 'ip' => ipv6, 'entry' => config['mail']['mx']})
 
       dkim_key = OpenSSL::PKey::RSA.new(File.read(config['mail']['dkim_private']))
       b64_key = Base64.strict_encode64(dkim_key.public_key.to_der)

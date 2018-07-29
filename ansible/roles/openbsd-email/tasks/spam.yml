@@ -2,6 +2,18 @@
 - name: Setup assassin
   template: src=spamassassin-local.cf.j2 dest=/etc/mail/spamassassin/local.cf
 
-- name: Custom SpamPD RC Script
-  template: src=spampd_custom.j2 dest=/etc/rc.d/spampd_custom mode=0755
+- name: Setup RC Flags for spampd
+  lineinfile:
+      dest: /etc/rc.conf.local
+      regexp: ^spampd_flags
+      line: "spampd_flags=\"--port={{ ports.spampd_in }} --relayhost=127.0.0.1:{{ ports.spampd_return }} --tagall -pid=/var/spampd/spampd.pid -aw\""
+      create: Yes
   notify: Reload spampd
+
+- name: Certbot Cron
+  cron:
+    cron_file: /etc/crontab
+    user: root
+    name: "start spampd"
+    special_time: "reboot"
+    job: "/etc/rc.d/spampd start"

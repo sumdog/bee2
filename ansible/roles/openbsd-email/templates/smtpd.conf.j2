@@ -5,15 +5,16 @@ table vdoms  "{{ vdoms_file }}"
 table vusers "{{ vusers_file }}"
 
 listen on lo0 port {{ ports.spampd_return}} tag SPAMD
-listen on lo0 port {{ ports.clam_return }} tag CLAM_IN
+listen on lo0 port {{ ports.clam_return }} tag CLAM
+listen on lo0 port {{ ports.dkim_return }} tag DKIM
 
 listen on egress port smtp tls pki {{ mx }}
 listen on egress port 465 smtps pki {{ mx }}
 listen on egress port submission tls-require pki {{ mx }} auth
 
-accept tagged CLAM_IN for domain <vdoms> virtual <vusers> deliver to mda "procmail -f -"
-#accept tagged CLAM_IN for any deliver to maildir
+accept tagged CLAM for domain <vdoms> virtual <vusers> deliver to mda "procmail -f -"
 accept tagged SPAMD for any relay via "smtp://127.0.0.1:{{ ports.clam_in }}"
 accept from any for domain <vdoms> relay via "smtp://127.0.0.1:{{ ports.spampd_in }}"
 
-accept from local for any relay
+accept tagged DKIM for any relay hostname {{ mx }}
+accept from local for any relay via smtp://127.0.0.1:{{ ports.dkim_in }}

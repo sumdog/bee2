@@ -2,5 +2,5 @@
 
 /usr/local/bin/certbot certonly --standalone --preferred-challenges http \
    --http-01-port 80 --agree-tos --renew-by-default --non-interactive \
-   --email {{ cert_email }} -d {{ mx }} --staging \
+   --email {{ cert_email }} -d {{ mx }} \
    --deploy-hook /usr/local/bin/certbot-deploy-hook.sh

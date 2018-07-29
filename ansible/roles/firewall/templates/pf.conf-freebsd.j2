@@ -2,6 +2,8 @@
 
 block all
 
+pass in quick on vtnet0 inet6 proto ipv6-icmp
+
 # allow all from host itself
 pass out inet all keep state
 pass out inet6 all keep state

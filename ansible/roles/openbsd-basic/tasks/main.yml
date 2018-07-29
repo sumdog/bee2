@@ -7,16 +7,32 @@
     name: colorls
     state: present
 
+- name: Install nice to have packages
+  openbsd_pkg:
+    name: "{{ item }}"
+    state: present
+  with_items: ['colorls', 'vim--no_x11', 'fish']
+
+- name: Set Kernel open file limits
+  command: sysctl kern.maxfiles=20000
+
+- name: Kernel open file limits on reboots
+  copy:
+    content: "kern.maxfiles=20000"
+    dest: /etc/sysctl.conf
+    force: no
+
 - name: Setup colorls alias
   lineinfile:
-    dest: /root/.profile
+    dest: "{{ item }}"
     line: "alias ls='colorls -FGa'"
     regexp: "^alias ls='colorls -FGa'$"
     state: present
     insertafter: EOF
     create: True
+  with_items: ['/root/.profile', '/root/.config/fish/config.fish']
 
-- name: Install vim
-  openbsd_pkg:
-    name: vim--no_x11
-    state: present
+- name: Set Root to Fish Shell
+  user:
+    name: root
+    shell: /usr/local/bin/fish

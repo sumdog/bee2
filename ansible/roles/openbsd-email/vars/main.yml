@@ -13,7 +13,7 @@ domains_csv: "{{ domains | join(', ') }}"
 local_dkim_key: "../{{ servers[ansible_hostname].mail.dkim_private }}"
 cert_script: /usr/local/bin/get_certs
 tls_key: /etc/letsencrypt/live/{{ mx }}/privkey.pem
-tls_cert: /etc/letsencrypt/live/{{ mx }}/chain.pem
+tls_cert: /etc/letsencrypt/live/{{ mx }}/fullchain.pem
 ports:
   spampd_in: 10025
   clam_in: 10026
