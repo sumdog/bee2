@@ -16,6 +16,12 @@ import json
 # }
 db_list = json.loads(env['DATABASE_JSON'])
 
+def normalize(name):
+    normalized = name.replace('-', '_')
+    if name != normalized:
+        print('{} normalized to {}'.format(name, normalized))
+    return normalized
+
 # db_type: postgres or mysql
 def dbs(db_type):
     return [i for i in db_list['containers'] if i['db'] == db_type]
@@ -32,7 +38,7 @@ else:
     cur = cnx.cursor()
 
     for my in dbs('mysql'):
-        (app,password) = my['container'], my['password']
+        (app,password) = normalize(my['container']), my['password']
         print('MySQL DB Setup: {}'.format(app))
         cur.execute("CREATE DATABASE IF NOT EXISTS {}".format(app))
         cur.execute("GRANT ALL ON {}.* TO '{}'@'%' IDENTIFIED BY '{}'".format(
@@ -53,7 +59,7 @@ else:
     cur = conn.cursor()
 
     for pg in dbs('postgres'):
-        (app,password) = pg['container'], pg['password']
+        (app,password) = normalize(pg['container']), pg['password']
         sql = "SELECT COUNT(*) = 0 FROM pg_catalog.pg_database WHERE datname = '{}'"
         cur.execute(sql.format(app))
         not_exists_row = cur.fetchone()

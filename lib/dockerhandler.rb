@@ -41,11 +41,11 @@ Usage: bee2 -c <config> -d COMMAND
     exit 1
   end
 
-  def initialize(config, log, command)
+  def initialize(config, log, command, passstore)
     @log = log
     @config = config
     @prefix = @config.fetch('docker',{}).fetch('prefix','bee2')
-    @passstore = PassStore.new(@config)
+    @passstore = passstore
     @network = "#{@prefix}-network"
 
     cmds = command.split(':')
@@ -193,7 +193,9 @@ Usage: bee2 -c <config> -d COMMAND
       @config[section].select { |app, cfg|
         cfg.has_key?('db') }.map { |app, l|
           l['db'].map { |db|
-            { :container => app, :db => db }
+            db_parts = db.split(':')
+            db_name = db_parts[1].nil? ? app : db_parts[1]
+            { :container => db_name, :db => db_parts[0] }
           }
         }
     }.flatten
@@ -221,6 +223,20 @@ Usage: bee2 -c <config> -d COMMAND
     }
   end
 
+  # used to determine if we should pull a specific database: 
+  #   _mysql:somedatabase^password
+  #   _mysql^password  <-- uses container name
+  private def container_password_select(c, db_type, name)
+    if db_type.include?(':')
+      parts = db_type.split(':')
+      db_type = parts[0]
+      db_name = parts[1]
+    else
+      db_name = name
+    end
+    return (c[:container] == db_name and c[:db] == db_type)
+  end
+
   # Convert envs in YAML to environment variable strings
   # to be passed in to Docker
   # Handles the spcial case DOMAINS=all, expanding it to
@@ -246,9 +262,9 @@ Usage: bee2 -c <config> -d COMMAND
           case db_var
           when 'password'
             db_pass = db_mapping.select { |c|
-              c[:container] == name and c[:db] == db_type
+              container_password_select(c, db_type, name)
             }.first[:password]
-            "#{var.upcase}=#{db_pass}"
+	    "#{var.upcase}=#{db_pass}"
           when 'adminpass'
             "#{var.upcase}=#{db_admin_passwords[db_type]}"
           else
@@ -356,7 +372,7 @@ Usage: bee2 -c <config> -d COMMAND
        'container_args' => {
          "RestartPolicy": { "Name": "unless-stopped" },
          'Env' => env,
-         'Cmd' => cmd,
+         'Cmd' => (cmd.split(' ') if not cmd.nil?),
          'NetworkingConfig' =>
            {'EndpointsConfig' =>
              {@network =>

@@ -114,5 +114,5 @@ if options[:sync]
 end
 
 if options[:docker]
-  docker = DockerHandler.new(config, log, options[:docker])
+  docker = DockerHandler.new(config, log, options[:docker], PassStore.new(config))
 end

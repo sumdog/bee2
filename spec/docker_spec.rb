@@ -4,6 +4,18 @@ require 'logger'
 
 log = Logger.new(STDOUT)
 
+class MockPassStore
+
+  def initialize()
+  end
+
+  ## rescue GPGME::Error::DecryptFailed upstream for failed passwords
+  def get_or_generate_password(folder, name)
+    return "passfor:#{folder}:#{name}"
+  end
+
+end
+
 RSpec.describe DockerHandler do
   prefix = 'foo2'
   config = <<-CONFIG
@@ -38,6 +50,22 @@ RSpec.describe DockerHandler do
     image-poster:
       server: web1
       cmd: some_command -a -f -t
+      db:
+        - postgres
+    single-db-app:
+      server: web1
+      db:
+        - postgres
+    shared-db-app1:
+      server: web1
+      db:
+        - postgres:shared
+    shared-db-app2:
+      server: web1
+      db:
+        - postgres:shared
+    shared:
+      server: web1
       db:
         - postgres
     cron:
@@ -79,7 +107,7 @@ RSpec.describe DockerHandler do
         location: Wellington
   CONFIG
   cfg_yaml = YAML.load(config)
-  config = DockerHandler.new(cfg_yaml, log, 'web1:test')
+  config = DockerHandler.new(cfg_yaml, log, 'web1:test', MockPassStore.new)
 
   describe "domain mapping" do
     it "returns a list of each container and its domains" do
@@ -101,6 +129,30 @@ RSpec.describe DockerHandler do
          config.state['servers']['web1']['ipv6']['subnet'] +
          cfg_yaml['servers']['web1']['ipv6']['docker']['static_web']
       )
+    end
+  end
+
+  describe "database configuration" do
+    it "should load all database sections" do
+      expect(config.db_mapping.size).to eq(6)
+    end
+    it "should use container name as a database name if none specified" do
+      ce = config.db_mapping.find { |i| i[:container] == 'content-engine' }
+      expect(ce).to eq({:container=>"content-engine", :db=>"mysql", :password=>"passfor:database/mysql:content-engine"})
+      ip = config.db_mapping.find { |i| i[:container] == 'image-poster' }
+      expect(ip).to eq({:container=>"image-poster", :db=>"postgres", :password=>"passfor:database/postgres:image-poster"})
+      sd = config.db_mapping.find { |i| i[:container] == 'single-db-app' }
+      expect(sd).to eq({:container=>"single-db-app", :db=>"postgres", :password=>"passfor:database/postgres:single-db-app"})
+    end
+    it "should allow of a specific database name" do
+      expect(config.db_mapping.find { |i| i[:container] == 'shared-db-app1' }).to be_nil
+      expect(config.db_mapping.find { |i| i[:container] == 'shared-db-app2' }).to be_nil
+      sa = config.db_mapping.find { |i| i[:container] == 'shared' }
+      expect(sa).to eq({:container=>"shared", :db=>"postgres", :password=>"passfor:database/postgres:shared"})
+    end
+    it "should allow a container with an unspecified shared name" do
+      sh = config.db_mapping.find { |i| i[:container] == 'shared' }
+      expect(sh).to eq({:container=>"shared", :db=>"postgres", :password=>"passfor:database/postgres:shared"})
     end
   end
 
@@ -129,7 +181,7 @@ RSpec.describe DockerHandler do
     it "specifies a custom command if present" do
       r = config.config_to_containers('apps', 'web1', 'image-poster')
       expect(1 == 2)
-      expect(r["#{prefix}-app-image-poster"]['container_args']['Cmd']).to  eq('some_command -a -f -t')
+      expect(r["#{prefix}-app-image-poster"]['container_args']['Cmd']).to  eq(['some_command', '-a', '-f', '-t'])
     end
 
     it "does not specify a custom command if not present" do
