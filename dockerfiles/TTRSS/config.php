@@ -23,7 +23,7 @@ define('SPHINX_INDEX', 'ttrss, delta');
 define('ENABLE_REGISTRATION', false);
 define('REG_NOTIFY_ADDRESS', 'user@your.domain.dom');
 define('REG_MAX_USERS', 10);
-define('SESSION_COOKIE_LIFETIME', 86400);
+define('SESSION_COOKIE_LIFETIME', 2592000);
 define('SMTP_FROM_NAME', 'Tiny Tiny RSS');
 define('SMTP_FROM_ADDRESS', 'noreply@your.domain.dom');
 define('DIGEST_SUBJECT', '[tt-rss] New headlines for last 24 hours');
