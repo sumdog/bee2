@@ -36,8 +36,12 @@ opts = OptionParser.new do |opts|
     options[:rebuild] = rebuild
   end
 
-  opts.on('-a', '--ansible INVENTORY', [:public, :private], 'Run Ansible on Inventory (public|private)') do |ansible|
-    options[:inventory] = ansible
+  opts.on('-a', '--ansible INVENTORY', 'Run Ansible on (public|private)[:server].') do |inventory|
+    cmd = inventory.split(':')
+    options[:inventory] = cmd[0]
+    if not cmd[1].nil?
+      options[:server] = cmd[1]
+    end
   end
 
   opts.on('-s', '--sync SERVERS', 'Sync data between host and server') do |srv|
@@ -66,9 +70,10 @@ config = YAML.load_file(options[:config])
 case config['provisioner']['type']
 when 'vultr'
   p = VultrProvisioner.new(config, log)
+when 'exoscale'
+  p = ExoscaleProvisioner.new(config, log)
 when 'digitalocean'
-  @log.warn('Not Implemented')
-  abort("Digital Ocean Not Implemented")
+  p = DigitalOceanProvisioner.new(config, log)
 end
 
 if options[:provision]
@@ -86,17 +91,14 @@ end
 if options[:inventory]
   inv_file = config['inventory'][options[:inventory].to_s]
 
-  # Format: filename:server, e.g public:web, or just filename (public/private)
-  # inv = config['inventory'][options[:inventory].to_s].partition(':')
-  # inv_file = inv.first
-  # hosts = inv.last
-
   playbooks = config['servers'].flat_map { |server, info| {server => info['playbook']} }.inject(:update)
   log.info("Running Ansible (Inventory: #{options[:inventory]} :: #{inv_file})")
   playbooks.each { |server, playbook|
     # if not hosts.empty? and not hosts.split(',').include?(server)
     #   next
     # end
+    next if not options[:server].nil? and options[:server] != server
+
     log.info("Applying #{playbook} to #{server}")
     cmd = ['ansible-playbook', '--limit', server, '--key-file', config['provisioner']['ssh_key']['private'],
            '-u', 'root', '-e', "config_file=#{options[:config].to_s}", '-i', inv_file,
