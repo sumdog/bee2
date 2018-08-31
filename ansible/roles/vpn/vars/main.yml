@@ -4,3 +4,4 @@ openvpn_host: "{{ servers[ansible_hostname].dns.public[0] }}"
 local_openvpn_client_keys: ../conf/opvn-clients/
 openvpn_server_conf: "{{ openvpn_etc }}/openvpn.conf"
 openvpn_routes: "{{ openvpn.server.routes }}"
+openvpn_client_config: "{{ openvpn_etc }}/clientconfig"

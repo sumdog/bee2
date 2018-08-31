@@ -7,32 +7,20 @@ require 'cgi'
 require 'json'
 require 'openssl'
 require 'base64'
+require_relative 'provisioner'
 
-class VultrProvisioner
+class VultrProvisioner < Provisioner
 
   SSH_KEY_ID = 'b2-provisioner'
 
   def initialize(config, log)
-    @log = log
+    super(config, log)
     @api_key = config['provisioner']['token']
     @inventory_files = config['inventory']
     @servers = config['servers']
+    @vpn = config['openvpn']
     @ssh_key = File.read(config['provisioner']['ssh_key']['public'])
-
-    @DCID =  request('GET', 'regions/list').find { |id,region|
-      region['regioncode'] == config['provisioner']['region']
-    }.last['DCID']
-    if @DCID.nil?
-      @log.fatal("Invalid Data Center #{config['provisioner']['region']}")
-      exit 1
-    end
-
-    @state_file = config['provisioner']['state_file']
-    if File.exists? @state_file
-      @state = YAML.load_file(@state_file)
-    else
-      @state = {}
-    end
+    @default_region = config['provisioner']['region']
   end
 
   def request(method, path, args = {}, ok_lambda = nil, error_code = nil, err_lambda = nil)
@@ -89,6 +77,7 @@ class VultrProvisioner
     end
     ensure_servers
     update_dns
+    vpn_dns
     cleanup_dns
     mail_dns
     write_inventory
@@ -161,6 +150,18 @@ class VultrProvisioner
         end
       }
     }
+  end
+
+  def vpn_dns()
+    if not @vpn.nil?
+      @log.info("Updating VPN DNS for #{@vpn['dnsdomain']}")
+
+      # TODO: domain creation if it doesn't exist?
+
+      @vpn['clients'].each { |client, cfg|
+        dns_update_check({'domain' => @vpn['dnsdomain'], 'name' => client, 'type' => 'A', 'data' => cfg['ip'] })
+      }
+    end
   end
 
   def mail_dns()
@@ -271,17 +272,28 @@ class VultrProvisioner
     }
   end
 
+  def region_for_server(server)
+    regioncode = (not @servers[server]['region'].nil?) ? @servers[server]['region'] : @default_region
+    dcid =  request('GET', 'regions/list').find { |id,region|
+      region['regioncode'] == regioncode
+    }.last['DCID']
+    if dcid.nil?
+      @log.fatal("Invalid Data Center #{regioncode}")
+      exit 1
+    end
+    dcid
+  end
+
   def ensure_servers
     current_servers = request('GET', 'server/list').map { |k,v| v['label'] }
     create_servers = @state['servers'].keys.reject { |server| current_servers.include? server }
     create_servers.each { |server|
-       @log.info("Creating #{server}")
-       server_config = {'DCID' => @DCID, 'VPSPLANID' => @servers[server]['plan'], 'OSID' => @servers[server]['os'],
+       @log.info("Creating #{server} in Region #{region_for_server(server)}")
+       server_config = {'DCID' => region_for_server(server), 'VPSPLANID' => @servers[server]['plan'], 'OSID' => @servers[server]['os'],
              'enable_private_network' => 'yes',
              'enable_ipv6' => 'yes',
              'label' => server, 'SSHKEYID' => @state['ssh_key_id'],
              'hostname' => server, 'reserved_ip_v4' => @state['servers'][server]['ipv4']['subnet'] }
-       @log.debug(server_config)
        subid = request('POST', 'server/create', server_config)['SUBID']
        @state['servers'][server]['SUBID'] = subid
        save_state
@@ -390,10 +402,10 @@ class VultrProvisioner
       if @state['servers'][s].nil?
           @state['servers'][s] = {}
           @state['servers'][s]['ipv4'] = request('POST', 'reservedip/create', {
-            'DCID' => @DCID, 'ip_type'=> 'v4', 'label'=> s})
+            'DCID' => region_for_server(s), 'ip_type'=> 'v4', 'label'=> s})
           @state['servers'][s]['ipv6'] = request('POST', 'reservedip/create', {
-            'DCID' => @DCID, 'ip_type'=> 'v6', 'label'=> s})
-          @log.info("Reserved IPs for: #{s}")
+            'DCID' => region_for_server(s), 'ip_type'=> 'v6', 'label'=> s})
+          @log.info("Reserved IPs for: #{s} in Region #{region_for_server(s)}")
           save_state
       end
     }
@@ -411,10 +423,6 @@ class VultrProvisioner
       }
     }
     save_state
-  end
-
-  def save_state()
-    File.open(@state_file, 'w') { |f| YAML.dump(@state, f) }
   end
 
 end

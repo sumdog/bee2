@@ -4,6 +4,8 @@ require 'yaml'
 require 'optparse'
 require 'logger'
 require_relative 'lib/vultr'
+require_relative 'lib/exoscale'
+require_relative 'lib/digitalocean'
 require_relative 'lib/dockerhandler'
 require_relative 'lib/synchandler'
 

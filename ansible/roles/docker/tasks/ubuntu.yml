@@ -5,8 +5,8 @@
   - name: Disable Local Socket Access for Docker
     lineinfile:
       dest: /lib/systemd/system/docker.service
-      regexp: '^ExecStart=.*\$DOCKER_OPTS'
-      line: "ExecStart=/usr/bin/dockerd $DOCKER_OPTS"
+      regexp: '^ExecStart=\/usr\/bin\/dockerd.*'
+      line: "ExecStart=/usr/bin/dockerd"
     register: systemd_target_update
 
   - name: Reload Systemd targets

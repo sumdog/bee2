@@ -1,0 +1,32 @@
+---
+- name: Install OpenVPN
+  action: apt name=openvpn
+
+- name: Copy CA
+  copy:
+    src: "{{ local_openvpn_ca }}"
+    dest: "{{ openvpn_client_dir }}/ca.crt"
+    mode: 0600
+
+- name: Copy Client Cert
+  copy:
+    src: "{{ local_openvpn_crt }}"
+    dest: "{{ openvpn_client_dir }}/{{ ansible_hostname }}.crt"
+    mode: 0600
+
+- name: Copy Client Key
+  copy:
+    src: "{{ local_openvpn_key }}"
+    dest: "{{ openvpn_client_dir }}/{{ ansible_hostname }}.key"
+    mode: 0600
+
+- name: Configure OpenVPN
+  template:
+    src: openvpn.conf.j2
+    dest: "/etc/openvpn/client.conf"
+  notify: reload openvpn-client
+
+- name: Enable OpenVPN Service
+  service: name=openvpn@client enabled=yes state=started
+
+- meta: flush_handlers

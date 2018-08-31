@@ -1,4 +1,6 @@
 ---
+  - name: Install ifupdown
+    action: apt name=ifupdown
   - blockinfile:
       path: /etc/network/interfaces
       block: |

@@ -11,7 +11,7 @@
   file: path={{ openvpn_etc }} state=directory
 
 - name: Copy Default OpenSSL Configuration
-  copy: remote_src=True src=/usr/local/share/easy-rsa/openssl-1.0.cnf.example dest={{ openvpn_etc }}/openssl-1.0.cnf
+  copy: remote_src=True src=/usr/local/share/easy-rsa/openssl-easyrsa.cnf.example dest={{ openvpn_etc }}/openssl-easyrsa.cnf
 
 - name: Symbolic Link x509 Types
   file:
@@ -54,10 +54,23 @@
   command: easyrsa build-client-full {{ item.key }} nopass
   environment:
     EASYRSA: "{{ openvpn_etc }}"
+    EASYRSA_PKI: "{{ openvpn_pki }}"
     EASYRSA_BATCH: true
   with_dict: "{{ openvpn.clients }}"
   args:
     creates: "{{ openvpn_pki }}/private/{{ item.key }}.key"
+
+- name: Ensure Client Config Directory Exists
+  file:
+    path: "{{ openvpn_client_config }}"
+    state: directory
+
+- name: Assign Client IP
+  copy:
+    content: "ifconfig-push {{ item.value['ip'] }} 255.255.255.0"
+    dest: "{{ openvpn_client_config }}/{{ item.key }}"
+    force: yes
+  with_dict: "{{ openvpn.clients }}"
 
 - name: Copy Client Keys
   fetch:

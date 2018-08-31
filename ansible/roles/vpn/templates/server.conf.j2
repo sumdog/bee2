@@ -1,6 +1,7 @@
 port 1194
 proto udp
 dev tun
+topology subnet
 ca {{ openvpn_pki }}/ca.crt
 cert {{ openvpn_pki }}/issued/{{ openvpn_host }}.crt
 key {{ openvpn_pki }}/private/{{ openvpn_host }}.key
@@ -16,6 +17,7 @@ push "route {{ route }}"
 compress lz4-v2
 push "compress lz4-v2"
 client-to-client
+client-config-dir {{ openvpn_client_config }}
 persist-key
 persist-tun
 status /tmp/openvpn-status.log

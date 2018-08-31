@@ -1,0 +1,6 @@
+openvpn_host: "{{ servers[ansible_hostname].vpn }}"
+local_openvpn_client_keys: ../conf/opvn-clients
+local_openvpn_crt: "{{ local_openvpn_client_keys }}/{{ ansible_hostname }}.crt"
+local_openvpn_key: "{{ local_openvpn_client_keys }}/{{ ansible_hostname }}.key"
+local_openvpn_ca: "{{ local_openvpn_client_keys }}/ca.crt"
+openvpn_client_dir: /etc/openvpn/client

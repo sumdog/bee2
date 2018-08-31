@@ -1,0 +1,16 @@
+client
+dev-type tun
+dev openvpn
+proto udp
+remote {{ openvpn_host }} 1194
+resolv-retry infinite
+nobind
+ca /etc/openvpn/client/ca.crt
+cert /etc/openvpn/client/{{ ansible_hostname }}.crt
+key /etc/openvpn/client/{{ ansible_hostname }}.key
+cipher AES-256-CBC
+compress lz4-v2
+persist-key
+persist-tun
+status /var/log/openvpn/{{ ansible_hostname }}-status.log
+log-append /var/log/openvpn/{{ ansible_hostname }}.log
