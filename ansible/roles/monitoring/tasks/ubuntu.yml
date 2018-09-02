@@ -1,0 +1,7 @@
+---
+- name: Install netdata (Ubuntu)
+  action: apt name=netdata
+
+- name: Configure netdata for Private Adapter (Ubuntu)
+  template: src=netdata.conf-ubuntu.j2 dest=/etc/netdata/netdata.conf
+  notify: restart netdata

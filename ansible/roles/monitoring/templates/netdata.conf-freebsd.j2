@@ -1,0 +1,16 @@
+[global]
+  history = 86400
+  bind to = {{ servers[ansible_hostname].private_ip }}
+  disconnect idle web clients after seconds = 3600
+  run as user = netdata
+  web files owner = netdata
+  web files group = netdata
+  default port = 19999
+  respect web browser do not track policy = yes
+
+[plugins]
+  freebsd = yes
+
+[plugin:freebsd]
+  netdata server resources = yes
+  sysctl = yes

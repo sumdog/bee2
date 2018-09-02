@@ -1,0 +1,7 @@
+---
+- name: Install netdata (FreeBSD)
+  pkgng: name=netdata state=present
+
+- name: Configure netdata for Private Adapter (Ubuntu)
+  template: src=netdata.conf-freebsd.j2 dest=/usr/local/etc/netdata/netdata.conf
+  notify: restart netdata

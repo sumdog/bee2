@@ -14,6 +14,9 @@
   - name: Allow Docker internally
     ufw: rule=allow port=2376 direction=in proto=tcp interface={{ private_eth }}
 
+  - name: Allow Monitoring internally
+    ufw: rule=allow port=19999 direction=in proto=tcp interface={{ private_eth }}
+
   - name: 80 is open
     ufw: rule=allow port=80 proto=tcp
 

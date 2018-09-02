@@ -1,0 +1,13 @@
+---
+- name: Ubuntu Monitoring
+  block:
+    - include_tasks: ubuntu.yml
+  when: ansible_distribution in [ 'Debian', 'Ubuntu' ]
+
+- name: FreeBSD Monitoring
+  block:
+    - include_tasks: freebsd.yml
+  when: ansible_distribution == 'FreeBSD'
+
+- name: Start and Enable netdata Service
+  service: name=netdata enabled=yes state=started
