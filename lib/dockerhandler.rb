@@ -27,14 +27,6 @@ Usage: bee2 -c <config> -d COMMAND
     Running Jobs:
        <server>:run[:job]
 
-    Volumes:
-      <server>:backup
-      <server>:restore[:timestamp]
-
-      Examples:
-        web1:backup
-        web1:restore
-        web1:restore:1510205477
     USAGE
 
     print(doc)
@@ -55,12 +47,6 @@ Usage: bee2 -c <config> -d COMMAND
     if @server == 'help'
       usage()
     end
-
-    @volumes = @config.fetch('docker', {}).fetch('backup', {}).fetch(@server, {}).fetch('volumes', []).map { |vol|
-      "#{vol}:/volumes/#{vol}"
-    }
-    @backup_dir = @config.fetch('docker', {}).fetch('backup', {}).fetch(@server, {}).fetch('storage_dir', './volumes')
-
     cert_path = "conf/docker/#{@server}"
 
     server_dns = @config.fetch('servers', {}).fetch(@server, {}).fetch('dns', {}).fetch('private', {})
@@ -86,17 +72,13 @@ Usage: bee2 -c <config> -d COMMAND
 
     case cmds[1]
     when 'build'
-      launch_containers(config_to_containers('apps', @server, cmds[2]))
+      launch_containers(config_to_containers('apps', cmds[2]))
     when 'rebuild'
       clean_containers(cmds[2])
-      launch_containers(config_to_containers('apps', @server, cmds[2]))
+      launch_containers(config_to_containers('apps', cmds[2]))
     when 'run'
       clean_containers(cmds[2], 'job')
-      launch_containers(config_to_containers('jobs', @server, cmds[2]), true)
-    when 'backup'
-      backup_volumes(@server)
-    when 'restore'
-      restore_volumes(@server, cmds[2])
+      launch_containers(config_to_containers('jobs', cmds[2]), true)
     when 'test'
     else
       @log.error("Unknown command #{cmds[1]}")
@@ -120,50 +102,6 @@ Usage: bee2 -c <config> -d COMMAND
           {"Subnet" => ipv6}
         ]}
       })
-    end
-  end
-
-  def backup_volumes(server)
-    @log.info("Backing up volumes #{server}/#{@volumes}")
-    FileUtils.mkdir_p(File.join(@backup_dir, server))
-    backup_container = create_container(
-      "#{@prefix}-volume-backup", nil, 'app', nil, './dockerfiles/VolumeReader', nil, nil, nil,
-      nil, nil, @volumes
-    )
-    backup_name = File.join(@backup_dir, server, "#{Time.now.to_i}-volumes.tar")
-    launch_containers(backup_container, true, -> c {
-      @log.info("Creating #{backup_name}")
-      File.open(backup_name, 'wb') do |tar|
-        c.copy('/volumes') { |chunk| tar.write(chunk) }
-      end
-    })
-  end
-
-  def restore_volumes(server, date)
-    vol_file = case date
-    when nil # Get latest
-      Dir.glob(File.join(@backup_dir, server, '*.tar')).sort.first
-    else
-      File.join(@backup_dir, server, "#{date}-volumes.tar")
-    end
-
-    @log.info("Restoring volume #{vol_file}")
-
-    if vol_file.nil? or not File.exists?(vol_file)
-      @log.error("Cannot find volume #{vol_file}")
-      abort("Error restoring volume")
-    end
-
-    Dir.mktmpdir do |temp_dir|
-      @log.debug "Temp dir: #{temp_dir}"
-      FileUtils.cp_r 'dockerfiles/VolumeWriter/.', temp_dir
-      FileUtils.cp(vol_file, File.join(temp_dir, 'restore.tar'))
-      restore_container = create_container(
-        "#{@prefix}-volume-restore", nil, 'app', nil, temp_dir, nil, nil, nil,
-        nil, nil, @volumes
-      )
-      @log.info("Restoring volumes #{date}")
-      launch_containers(restore_container, true)
     end
   end
 
