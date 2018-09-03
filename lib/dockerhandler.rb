@@ -44,27 +44,28 @@ Usage: bee2 -c <config> -d COMMAND
   def initialize(config, log, command, passstore)
     @log = log
     @config = config
-    @prefix = @config.fetch('docker',{}).fetch('prefix','bee2')
     @passstore = passstore
-    @network = "#{@prefix}-network"
 
     cmds = command.split(':')
-    server = cmds[0]
+    @server = cmds[0]
 
-    if server == 'help'
+    @prefix = @config.fetch('docker',{}).fetch(@server, {}).fetch('prefix','bee2')
+    @network = "#{@prefix}-network"
+
+    if @server == 'help'
       usage()
     end
 
-    @volumes = @config.fetch('docker', {}).fetch('backup', {}).fetch(server, {}).fetch('volumes', []).map { |vol|
+    @volumes = @config.fetch('docker', {}).fetch('backup', {}).fetch(@server, {}).fetch('volumes', []).map { |vol|
       "#{vol}:/volumes/#{vol}"
     }
-    @backup_dir = @config.fetch('docker', {}).fetch('backup', {}).fetch(server, {}).fetch('storage_dir', './volumes')
+    @backup_dir = @config.fetch('docker', {}).fetch('backup', {}).fetch(@server, {}).fetch('storage_dir', './volumes')
 
-    cert_path = "conf/docker/#{server}"
+    cert_path = "conf/docker/#{@server}"
 
-    server_dns = @config.fetch('servers', {}).fetch(server, {}).fetch('dns', {}).fetch('private', {})
+    server_dns = @config.fetch('servers', {}).fetch(@server, {}).fetch('dns', {}).fetch('private', {})
     if server_dns.nil?
-      @log.error("Unknown server #{server}")
+      @log.error("Unknown server #{@server}")
       exit 2
     end
 
@@ -80,22 +81,22 @@ Usage: bee2 -c <config> -d COMMAND
 
 
     if cmds[1] != 'test'
-      establish_network(server)
+      establish_network
     end
 
     case cmds[1]
     when 'build'
-      launch_containers(config_to_containers('apps', server, cmds[2]))
+      launch_containers(config_to_containers('apps', @server, cmds[2]))
     when 'rebuild'
       clean_containers(cmds[2])
-      launch_containers(config_to_containers('apps', server, cmds[2]))
+      launch_containers(config_to_containers('apps', @server, cmds[2]))
     when 'run'
       clean_containers(cmds[2], 'job')
-      launch_containers(config_to_containers('jobs', server, cmds[2]), true)
+      launch_containers(config_to_containers('jobs', @server, cmds[2]), true)
     when 'backup'
-      backup_volumes(server)
+      backup_volumes(@server)
     when 'restore'
-      restore_volumes(server, cmds[2])
+      restore_volumes(@server, cmds[2])
     when 'test'
     else
       @log.error("Unknown command #{cmds[1]}")
@@ -107,9 +108,9 @@ Usage: bee2 -c <config> -d COMMAND
     YAML.load_file(@config['provisioner']['state_file'])
   end
 
-  def establish_network(server)
-    ipv6_subet = state['servers'][server]['ipv6']['subnet']
-    ipv6_suffix = @config['servers'][server]['ipv6']['docker']['suffix_net']
+  def establish_network
+    ipv6_subet = state['servers'][@server]['ipv6']['subnet']
+    ipv6_suffix = @config['servers'][@server]['ipv6']['docker']['suffix_net']
     ipv6 = "#{ipv6_subet}#{ipv6_suffix}"
 
     if Docker::Network.all.select { |n| n.info['Name'] == @network }.empty?
@@ -169,7 +170,7 @@ Usage: bee2 -c <config> -d COMMAND
   # Returns hash mapping applications to domains
   # excluding nils and the specail case 'all'
   def all_domains
-    @config['applications'].select { |app, cfg|
+    docker_cfg['applications'].select { |app, cfg|
       cfg.has_key?('env') }.map { |app,l|
         { app => l['env']}
       }.inject(:merge).map { |app, env|
@@ -190,7 +191,7 @@ Usage: bee2 -c <config> -d COMMAND
   def db_mapping
     # Identify all containers that request a database (link: _dbtype)
     db_map = ['applications', 'jobs'].map { |section|
-      @config[section].select { |app, cfg|
+      docker_cfg[section].select { |app, cfg|
         cfg.has_key?('db') }.map { |app, l|
           l['db'].map { |db|
             db_parts = db.split(':')
@@ -223,7 +224,11 @@ Usage: bee2 -c <config> -d COMMAND
     }
   end
 
-  # used to determine if we should pull a specific database: 
+  def docker_cfg
+    @config['docker'][@server]
+  end
+
+  # used to determine if we should pull a specific database:
   #   _mysql:somedatabase^password
   #   _mysql^password  <-- uses container name
   private def container_password_select(c, db_type, name)
@@ -264,7 +269,7 @@ Usage: bee2 -c <config> -d COMMAND
             db_pass = db_mapping.select { |c|
               container_password_select(c, db_type, name)
             }.first[:password]
-	    "#{var.upcase}=#{db_pass}"
+            "#{var.upcase}=#{db_pass}"
           when 'adminpass'
             "#{var.upcase}=#{db_admin_passwords[db_type]}"
           else
@@ -273,7 +278,7 @@ Usage: bee2 -c <config> -d COMMAND
           end
         end
       elsif val.is_a?(String) and val.start_with?('$')
-        ref_container = @config['applications'].select { |a,c| a == val.tr('$', '') }
+        ref_container = docker_cfg['applications'].select { |a,c| a == val.tr('$', '') }
         if ref_container.nil?
           @log.error("Could not find reference for #{val} in app configuration.")
           exit 3
@@ -281,7 +286,7 @@ Usage: bee2 -c <config> -d COMMAND
           "#{var.upcase}=#{@prefix}-app-#{ref_container.first[0]}"
         end
       elsif val.is_a?(String) and val.start_with?('+')
-        ref_container = @config['jobs'].select { |a,c| a == val.tr('+', '') }
+        ref_container = docker_cfg['jobs'].select { |a,c| a == val.tr('+', '') }
         if ref_container.nil?
           @log.error("Could not find reference for #{val} in job configuration.")
           exit 3
@@ -312,7 +317,7 @@ Usage: bee2 -c <config> -d COMMAND
     }
   end
 
-  def config_to_containers(ctype, server, container)
+  def config_to_containers(ctype, container)
     tcfg = case ctype
     when 'apps' then {:section => 'applications', :prefix => 'app'}
     when 'jobs' then {:section => 'jobs', :prefix => 'job'}
@@ -320,19 +325,18 @@ Usage: bee2 -c <config> -d COMMAND
 
     containers = {}
     if not container.nil?
-      c = @config[tcfg[:section]][container]
+      c = docker_cfg[tcfg[:section]][container]
       if c.nil?
-        @log.error("Could not find #{tcfg[:section]}/#{container}")
+        @log.error("Could not find docker/#{@server}/#{tcfg[:section]}/#{container}")
         exit 3
       else
         containers = { container => c }
       end
     else
-      containers = @config[tcfg[:section]]
+      containers = docker_cfg[tcfg[:section]]
     end
 
-    containers.select { |n, c|
-      c['server'] == server }.map { |name, cfg|
+    containers.map { |name, cfg|
 
       build_dir = cfg.fetch('build_dir', nil)
       if not build_dir.nil?
@@ -342,8 +346,8 @@ Usage: bee2 -c <config> -d COMMAND
       # Web static IPv6
       static_ipv6 = nil
       if cfg.fetch('ipv6_web', false)
-        ipv6_subet = state['servers'][server]['ipv6']['subnet']
-        ipv6_web = @config['servers'][server]['ipv6']['docker']['static_web']
+        ipv6_subet = state['servers'][@server]['ipv6']['subnet']
+        ipv6_web = @config['servers'][@server]['ipv6']['docker']['static_web']
         static_ipv6 = "#{ipv6_subet}#{ipv6_web}"
       end
 
