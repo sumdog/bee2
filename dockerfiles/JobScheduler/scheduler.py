@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 from os import environ, execv
+import subprocess
 
 if __name__ == '__main__':
 
@@ -22,4 +23,4 @@ if __name__ == '__main__':
         for name, cmds in tasks.items():
             ctab.write('{}\tdocker start {}\n'.format(cmds['schedule'], cmds['container']))
 
-    execv('/usr/sbin/crond', ['crond', '-f'])
+    subprocess.call(['crond', '-f'])
