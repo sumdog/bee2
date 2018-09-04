@@ -118,7 +118,7 @@ if __name__ == '__main__':
     live_crt = '/etc/letsencrypt/live'
     if not path.exists(live_crt):
         print('Creating Letsencrypt Live Directory')
-        os.makedirs(live_crt)
+        makedirs(live_crt)
 
     copyfile('dummy.pem', path.join(live_crt, 'dummy.pem'))
     print('Writing HAProxy Configuration')
