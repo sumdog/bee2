@@ -1,0 +1,3 @@
+---
+- name: Set max map count for Elastic Search
+  sysctl: name=vm.max_map_count value=262144 state=present
