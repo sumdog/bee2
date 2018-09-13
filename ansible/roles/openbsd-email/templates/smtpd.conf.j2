@@ -8,6 +8,8 @@ listen on lo0 port {{ ports.spampd_return}} tag SPAMD
 listen on lo0 port {{ ports.clam_return }} tag CLAM
 listen on lo0 port {{ ports.dkim_return }} tag DKIM
 
+listen on {{ private_eth }} port smtp
+
 listen on egress port smtp tls pki {{ mx }}
 listen on egress port 465 smtps pki {{ mx }}
 listen on egress port submission tls-require pki {{ mx }} auth
