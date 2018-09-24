@@ -296,6 +296,7 @@ Usage: bee2 -c <config> -d COMMAND
         build_dir,
         cfg.fetch('git', nil),
         cfg.fetch('branch', nil),
+        cfg.fetch('git_dir', nil),
         cfg.fetch('ports', nil),
         transform_envs(name, cfg.fetch('env', []), tcfg[:prefix]),
         cfg.fetch('volumes', nil),
@@ -304,13 +305,14 @@ Usage: bee2 -c <config> -d COMMAND
     }.inject(&:merge)
   end
 
-  def create_container(name, image, cprefix, cmd, build_dir, git, branch, ports, env, volumes, static_ipv6 = nil)
+  def create_container(name, image, cprefix, cmd, build_dir, git, branch, git_dir, ports, env, volumes, static_ipv6 = nil)
     {
      name => {
        'image' => image,
        'build_dir' => build_dir,
        'git' => git,
        'branch' => branch,
+       'git_dir' => git_dir,
        'container_args' => {
          "RestartPolicy": { "Name": "unless-stopped" },
          'Env' => env,
@@ -354,8 +356,14 @@ Usage: bee2 -c <config> -d COMMAND
               @log.info("Using branch #{params['branch']}")
               git.branches[params['branch']].checkout()
             end
-            @log.info("Creating Image for #{params['git']}")
-            Docker::Image.build_from_dir(git_dir).id
+            if params.key?('git_dir')
+              docker_dir = File.join(git_dir, params['git_dir'])
+              @log.info("Creating Image for #{params['git']}/#{params['git_dir']}")
+              Docker::Image.build_from_dir(docker_dir).id
+            else
+              @log.info("Creating Image for #{params['git']}")
+              Docker::Image.build_from_dir(git_dir).id
+            end
           }
         when params.key?('image')
           @log.info("Pulling Image #{params['image']}")

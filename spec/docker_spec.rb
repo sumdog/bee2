@@ -51,6 +51,8 @@ RSpec.describe DockerHandler do
           db:
             - postgres
         single-db-app:
+          git: git://single-app
+          git_dir: app/dockerfile
           db:
             - postgres
         shared-db-app1:
@@ -70,6 +72,9 @@ RSpec.describe DockerHandler do
             test: false
             domains: all
         nginx-static:
+          git: git@someplace
+          branch: dev
+          git_dir: system/docker
           env:
             domains:
               - dyject.com/80
@@ -77,6 +82,8 @@ RSpec.describe DockerHandler do
               - rearviewmirror.cc
         haproxy:
           ipv6_web: true
+          git: git@someplace
+          branch: dev
           env:
             domains: all
             certbot_container: $certbot
@@ -98,6 +105,7 @@ RSpec.describe DockerHandler do
             type: batch
       applications:
         con:
+          git: git://someplace
           env:
             location: Wellington
         nginx-static:
@@ -105,6 +113,7 @@ RSpec.describe DockerHandler do
             domains:
               - khanism.org
         mastodon:
+          build_dir: Mastodon
           env:
             domains:
               - hitchhiker.social
@@ -113,6 +122,7 @@ RSpec.describe DockerHandler do
             - mysql
             - postgres:special
         content-engine:
+          image: someorg/someimage:v1.2.3
           db:
             - postgres
   CONFIG
@@ -130,6 +140,57 @@ RSpec.describe DockerHandler do
       domains = config_web2.all_domains
       expect(domains).to contain_exactly(['nginx-static', ['khanism.org']],
         ['mastodon',['hitchhiker.social', 'streaming.hitchhiker.social/3000']])
+    end
+  end
+
+  describe "docker build config" do
+    it "clones a git repo without a branch" do
+      r = config_web2.config_to_containers('apps', 'con')
+      expect(r["#{prefix2}-app-con"]['image']).to be_nil
+      expect(r["#{prefix2}-app-con"]['build_dir']).to be_nil
+      expect(r["#{prefix2}-app-con"]['git']).to eq('git://someplace')
+      expect(r["#{prefix2}-app-con"]['branch']).to be_nil
+      expect(r["#{prefix2}-app-con"]['git_dir']).to be_nil
+    end
+    it "clones a git repo with a branch" do
+      r = config_web1.config_to_containers('apps', 'haproxy')
+      expect(r["#{prefix}-app-haproxy"]['image']).to be_nil
+      expect(r["#{prefix}-app-haproxy"]['build_dir']).to be_nil
+      expect(r["#{prefix}-app-haproxy"]['git']).to eq('git@someplace')
+      expect(r["#{prefix}-app-haproxy"]['branch']).to eq('dev')
+      expect(r["#{prefix}-app-haproxy"]['git_dir']).to be_nil
+    end
+    it "builds from the dockerfiles dir" do
+      r = config_web2.config_to_containers('apps', 'mastodon')
+      expect(r["#{prefix2}-app-mastodon"]['image']).to be_nil
+      expect(r["#{prefix2}-app-mastodon"]['build_dir']).to eq('./dockerfiles/Mastodon')
+      expect(r["#{prefix2}-app-mastodon"]['git']).to be_nil
+      expect(r["#{prefix2}-app-mastodon"]['branch']).to be_nil
+      expect(r["#{prefix2}-app-mastodon"]['git_dir']).to be_nil
+    end
+    it "uses an existing image" do
+      r = config_web2.config_to_containers('apps', 'content-engine')
+      expect(r["#{prefix2}-app-content-engine"]['image']).to eq('someorg/someimage:v1.2.3')
+      expect(r["#{prefix2}-app-content-engine"]['build_dir']).to be_nil
+      expect(r["#{prefix2}-app-content-engine"]['git']).to be_nil
+      expect(r["#{prefix2}-app-content-engine"]['branch']).to be_nil
+      expect(r["#{prefix2}-app-content-engine"]['git_dir']).to be_nil
+    end
+    it "clones a git repo with a subdirectory" do
+      r = config_web1.config_to_containers('apps', 'single-db-app')
+      expect(r["#{prefix}-app-single-db-app"]['image']).to be_nil
+      expect(r["#{prefix}-app-single-db-app"]['build_dir']).to be_nil
+      expect(r["#{prefix}-app-single-db-app"]['git']).to eq('git://single-app')
+      expect(r["#{prefix}-app-single-db-app"]['branch']).to be_nil
+      expect(r["#{prefix}-app-single-db-app"]['git_dir']).to eq('app/dockerfile')
+    end
+    it "clones a git report with a branch and subdirectory" do
+      r = config_web1.config_to_containers('apps', 'nginx-static')
+      expect(r["#{prefix}-app-nginx-static"]['image']).to be_nil
+      expect(r["#{prefix}-app-nginx-static"]['build_dir']).to be_nil
+      expect(r["#{prefix}-app-nginx-static"]['git']).to eq('git@someplace')
+      expect(r["#{prefix}-app-nginx-static"]['branch']).to eq('dev')
+      expect(r["#{prefix}-app-nginx-static"]['git_dir']).to eq('system/docker')
     end
   end
 

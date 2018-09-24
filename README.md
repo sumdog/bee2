@@ -306,7 +306,9 @@ The following is an example for a establishing an HAProxy load balancer along wi
 
 * Containers must specify either `build_dir`, `image` or `git`.
   * `build_dir` uses the directory found under `dockerfiles` of the bee2 project
-  * `git` will check out a project, select the optional `branch` and build the `Dockerfile` located in the base of the repository
+  * `git` will check out a project and build the `Dockerfile` located in the base of the repository
+     * `branch` optionally selects a repository branch
+     * `git_dir` optionally searches for the `Dockerfile` in a subdirectory of the repository
   * `image` will attempt to pull an existing Docker image
 * `volumes` indicate volume mappings which can be names or locations on the host file system
 * `env` is a list of environment variables that will be passed in as *ALL_CAPS* into the containers.
