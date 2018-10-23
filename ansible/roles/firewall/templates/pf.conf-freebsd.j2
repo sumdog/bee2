@@ -1,5 +1,7 @@
 # {{ ansible_managed }}
 
+set skip on lo
+
 block all
 
 pass in quick on vtnet0 inet6 proto ipv6-icmp
