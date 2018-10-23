@@ -1,6 +1,7 @@
 FROM python:3
 
 ENV CERTBOT_CONTAINER bee2-app-certbot
+ENV AWSTATS_CONTAINER disabled
 ENV DOMAINS example.com
 
 VOLUME ["/etc/haproxy", "/etc/letsencrypt"]

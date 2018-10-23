@@ -52,9 +52,7 @@ frontend https
     http-request set-header X-Forwarded-Port %[dst_port]
     http-request add-header X-Forwarded-Proto https if {{ ssl_fc }}
 
-    # Awstats
-    acl is_awstats path_beg -i /stats/
-    use_backend bk_awstats if is_awstats
+    {}
 
     {}
     default_backend bk_ssl_default
@@ -64,11 +62,30 @@ frontend https
 
 backend bk_letsencrypt
     server certbot {}:8080
-backend bk_awstats
-    server awstats {}:8080
+{}
 backend bk_ssl_default
     server default_ssl 127.0.0.1:8080
 """
+
+
+def awstats_config():
+    if environ['AWSTATS_CONTAINER'] != 'disabled':
+        return """
+          # Awstats
+          acl is_awstats path_beg -i /stats/
+          use_backend bk_awstats if is_awstats
+         """
+    else:
+        return ""
+
+def awstats_backend():
+    if environ['AWSTATS_CONTAINER'] != 'disabled':
+        return """
+            backend bk_awstats
+                server awstats {}:8080
+        """.format(environ['AWSTATS_CONTAINER'])
+    else:
+        return ""
 
 def ssl_vhosts(domain_map):
     vhosts = ''
@@ -108,12 +125,12 @@ def map_domains():
 
 if __name__ == '__main__':
     certbot_container = environ['CERTBOT_CONTAINER']
-    awstats_container = environ['AWSTATS_CONTAINER']
     domian_map = map_domains()
-    config = template.format(ssl_vhosts(domian_map),
+    config = template.format(awstats_config(),
+                             ssl_vhosts(domian_map),
                              ssl_backends(domian_map),
                              certbot_container,
-                             awstats_container)
+                             awstats_backend())
 
     live_crt = '/etc/letsencrypt/live'
     if not path.exists(live_crt):
