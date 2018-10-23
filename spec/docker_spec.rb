@@ -97,6 +97,12 @@ RSpec.describe DockerHandler do
         con:
           env:
             location: Melbourne
+        webgate:
+          ipv6_web: true
+          ports:
+            - 9292
+            - 9191
+          ipv4: 192.168.1.2
     web2:
       prefix: #{prefix2}
       jobs:
@@ -125,6 +131,18 @@ RSpec.describe DockerHandler do
           image: someorg/someimage:v1.2.3
           db:
             - postgres
+        irc:
+          ipv6_web: false
+          git: git@irc
+          ipv4: 100.100.100.1
+          ports:
+            - 6667
+            - 6668
+        gopher:
+          ipv6_web: false
+          git: git@gopher
+          ports:
+            - 70
   CONFIG
   cfg_yaml = YAML.load(config)
   config_web1 = DockerHandler.new(cfg_yaml, log, 'web1:test', MockPassStore.new)
@@ -336,6 +354,35 @@ RSpec.describe DockerHandler do
       r = config_web1.config_to_containers('apps', 'nginx-static')
       expect(r["#{prefix}-app-nginx-static"]).to_not have_key('NetworkingConfig')
     end
+
+    it "container that needs to bind to an external IPv4 address (without IPv6)" do
+      r = config_web2.config_to_containers('apps', 'irc')
+      expect(r["#{prefix2}-app-irc"]['container_args']['HostConfig']['PortBindings']).to eq(
+        {"6667/tcp"=>[{"HostPort"=>"6667", "HostIp"=>"100.100.100.1"}], "6668/tcp"=>[{"HostPort"=>"6668", "HostIp"=>"100.100.100.1"}]}
+      )
+    end
+
+    it "container that doesn't need to bind to an external IPv4 address (without IPv6)" do
+      r = config_web2.config_to_containers('apps', 'gopher')
+      expect(r["#{prefix2}-app-gopher"]['container_args']['HostConfig']['PortBindings']).to eq(
+        {"70/tcp"=>[{"HostPort"=>"70"}]}
+      )
+    end
+
+    # TODO: taking care of all of these secenerios gets pretty complex.
+    #       I'm only going to focus on my usecase for now
+
+    # it "container that needs to bind to an external IPv4 address (with IPv6)" do
+    #   r = config_web1.config_to_containers('apps', 'webgate')
+    #   expect(r["#{prefix}-app-webgate"]['container_args']['HostConfig']['PortBindings']).to eq(
+    #     {"9191/tcp"=>
+    #       [{"HostPort"=>"9191", "HostIp"=>"192.168.1.2"}, {"HostPort"=>"9191", "HostIp"=>"a:b:c:d::2:0:a"}],
+    #      "9292/tcp"=>
+    #       [{"HostPort"=>"9292", "HostIp"=>"192.168.1.2"}, {"HostPort"=>"9292", "HostIp"=>"a:b:c:d::2:0:a"}]
+    #     }
+    #   )
+    # end
+
   end
 
 end

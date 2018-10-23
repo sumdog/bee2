@@ -131,9 +131,20 @@ class DigitalOceanProvisioner < Provisioner
     end
   end
 
+  def pull_ipv6_info
+    request('GET', 'droplets')['droplets'].map { |d|
+      if @state['servers'].has_key?(d['name'])
+        @log.info("Server #{d['name']} IPv6 Address #{d['networks']['v6']['ip_address']}")
+        @state['servers'][d['name']]['ipv6'] = d['networks']['v6']['ip_address']
+      end
+    }
+    save_state
+  end
+
   def provision(rebuild = false, server = nil)
     ensure_ssh_keys
     reserve_ips
+    pull_ipv6_info
     # populate_ips
     # web_ipv6
     # if rebuild

@@ -3,11 +3,13 @@ class Provisioner
   def initialize(config, log)
     @log = log
 
-    @state_file = config['provisioner']['state_file']
-    if File.exists? @state_file
-      @state = YAML.load_file(@state_file)
-    else
-      @state = {}
+    if(config['provisioner'].has_key?('state_file)'))
+      @state_file = config['provisioner']['state_file']
+      if File.exists? @state_file
+        @state = YAML.load_file(@state_file)
+      else
+        @state = {}
+      end
     end
 
   end

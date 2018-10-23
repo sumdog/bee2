@@ -5,7 +5,8 @@ require 'fileutils'
 class PassStore
 
   def initialize(config)
-    @password_store = config.fetch('security', {}).fetch('password_store', File.join(Dir.home, '.password-store', 'bee2'))
+    folder = config.fetch('security', {}).fetch('folder', 'bee2')
+    @password_store = config.fetch('security', {}).fetch('password_store', File.join(Dir.home, '.password-store', folder))
     @crypt = GPGME::Crypto.new
     @pgp_id = config['security']['pgp_id']
   end

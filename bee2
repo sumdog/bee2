@@ -5,6 +5,7 @@ require 'optparse'
 require 'logger'
 require_relative 'lib/vultr'
 require_relative 'lib/exoscale'
+require_relative 'lib/name'
 require_relative 'lib/digitalocean'
 require_relative 'lib/dockerhandler'
 require_relative 'lib/synchandler'
@@ -76,6 +77,8 @@ when 'exoscale'
   p = ExoscaleProvisioner.new(config, log)
 when 'digitalocean'
   p = DigitalOceanProvisioner.new(config, log)
+when 'name'
+  p = NameProvisioner.new(config, log)
 end
 
 if options[:provision]

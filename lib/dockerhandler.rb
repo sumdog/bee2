@@ -87,21 +87,32 @@ Usage: bee2 -c <config> -d COMMAND
   end
 
   def state
-    YAML.load_file(@config['provisioner']['state_file'])
+    if(@config['provisioner'].has_key?('state_file'))
+      YAML.load_file(@config['provisioner']['state_file'])
+    else
+      {}
+    end
   end
 
   def establish_network
-    ipv6_subet = state['servers'][@server]['ipv6']['subnet']
-    ipv6_suffix = @config['servers'][@server]['ipv6']['docker']['suffix_net']
-    ipv6 = "#{ipv6_subet}#{ipv6_suffix}"
+    if not state.fetch('servers', {}).fetch(@server, {}).fetch('ipv6', {}).empty?
+      ipv6_subet = state['servers'][@server]['ipv6']['subnet']
+      ipv6_suffix = @config['servers'][@server]['ipv6']['docker']['suffix_net']
+      ipv6 = "#{ipv6_subet}#{ipv6_suffix}"
 
-    if Docker::Network.all.select { |n| n.info['Name'] == @network }.empty?
-      @log.info("Creating network #{@network} with IPv6 Subnet #{ipv6}")
-      Docker::Network.create(@network, {"EnableIPv6" => true,
-        "IPAM" => {"Config" => [
-          {"Subnet" => ipv6}
-        ]}
-      })
+      if Docker::Network.all.select { |n| n.info['Name'] == @network }.empty?
+        @log.info("Creating network #{@network} with IPv6 Subnet #{ipv6}")
+        Docker::Network.create(@network, {"EnableIPv6" => true,
+          "IPAM" => {"Config" => [
+            {"Subnet" => ipv6}
+          ]}
+        })
+      end
+    else
+      if Docker::Network.all.select { |n| n.info['Name'] == @network }.empty?
+        @log.info("Creating network #{@network} without IPv6")
+        Docker::Network.create(@network, {"EnableIPv6" => false})
+      end
     end
   end
 
@@ -300,12 +311,13 @@ Usage: bee2 -c <config> -d COMMAND
         cfg.fetch('ports', nil),
         transform_envs(name, cfg.fetch('env', []), tcfg[:prefix]),
         cfg.fetch('volumes', nil),
+        cfg.fetch('ipv4', nil),
         static_ipv6
       )
     }.inject(&:merge)
   end
 
-  def create_container(name, image, cprefix, cmd, build_dir, git, branch, git_dir, ports, env, volumes, static_ipv6 = nil)
+  def create_container(name, image, cprefix, cmd, build_dir, git, branch, git_dir, ports, env, volumes, ipv4, static_ipv6 = nil)
     {
      name => {
        'image' => image,
@@ -330,7 +342,9 @@ Usage: bee2 -c <config> -d COMMAND
            'Binds' => (volumes if not volumes.nil?),
            'PortBindings' => (ports.map { |port| {
              "#{port}/tcp" => [
-               { 'HostPort' => "#{port}" }
+               # TODO: this will break with certain ipv4/v6 combinations that are outside of my use cases
+               # see docker_spec.rb
+               { 'HostPort' => "#{port}", 'HostIp' => ipv4 }.reject{ |k,v| v.nil? }
              ]}
            }.inject(:merge) if not ports.nil?)
          }.reject{ |k,v| v.nil? }
