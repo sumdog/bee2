@@ -56,4 +56,13 @@ RSpec.describe Util do
     end
   end
 
+  describe "Primary Domain" do
+    it "should have an empty host" do
+      expect(Util.host_domain("bigsense.io")).to eq("")
+    end
+    it "should have a full base" do
+      expect(Util.base_domain("bigsense.io")).to eq("bigsense.io")
+    end
+  end
+
 end

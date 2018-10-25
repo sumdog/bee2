@@ -11,7 +11,11 @@ class Util
   end
 
   def self.host_domain(domain)
-    domain.chomp(".#{Util.base_domain(domain)}")
+    if Util.base_domain(domain) == domain
+      ""
+    else
+      domain.chomp(".#{Util.base_domain(domain)}")
+    end
   end
 
 end

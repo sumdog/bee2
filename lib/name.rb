@@ -23,6 +23,10 @@ class NameProvisioner < Provisioner
       r = Net::HTTP::Post.new(uri.path, initheader = headers)
       r.body = args.to_json
       r
+    when 'PUT'
+      r = Net::HTTP::Put.new(uri.path, initheader = headers)
+      r.body = args.to_json
+      r
     when 'GET'
       path = "#{uri.path}?".concat(args.collect { |k,v| "#{k}=#{CGI::escape(v.to_s)}" }.join('&'))
       Net::HTTP::Get.new(path, initheader = headers)
@@ -74,7 +78,7 @@ class NameProvisioner < Provisioner
             @log.info("DNS Correct. Skipping #{log_msg}")
           else
             @log.info("Updating #{log_msg}")
-            request('PUT', api_call, params)
+            request('PUT', "#{api_call}/#{cur['id']}", params)
           end
         }
       }
