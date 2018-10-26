@@ -48,6 +48,8 @@ frontend https
     bind :::443 v4v6 ssl crt /etc/letsencrypt/live
     mode http
 
+    http-request redirect prefix http://%[hdr(host),regsub(^www\.,,i)] code 301 if {{ hdr_beg(host) -i www. }}
+
     http-request set-header X-Forwarded-For %[src]
     http-request set-header X-Forwarded-Port %[dst_port]
     http-request add-header X-Forwarded-Proto https if {{ ssl_fc }}
@@ -96,10 +98,8 @@ def ssl_vhosts(domain_map):
             dsh = domain.replace('.', '_')
             vhosts += """
         acl {}     ssl_fc_sni -i {}
-        acl {}_www ssl_fc_sni -i www.{}
         use_backend bk_{} if {}
-        use_backend bk_{} if {}_www
-            """.format(dsh, domain, dsh, domain, link, dsh, link, dsh)
+            """.format(dsh, domain, link, dsh)
     return vhosts
 
 def ssl_backends(domain_map):
