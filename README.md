@@ -58,6 +58,32 @@ provisioner:
 
 (coming soon)
 
+### Name.com
+
+```
+provisioner:
+  type: name
+  api_key: 0000000000000000000000000
+  username: your_username
+servers:
+  bigsense:
+    ip:
+      private: 10.10.99.1
+      public: 93.184.216.34
+      gdns: 8.8.8.8
+    dns:
+      public:
+        - example.com
+        - www.exmaple.com
+        - example.net
+      private:
+        - internal.example.com
+      gdns:
+        - dns.example.com
+```
+
+The `name` provisioner can be used to setup DNS using the [Name.com API](https://www.name.com/api-docs/). It only handles DNS records. Other commands used with the `name` provisioner configuration assume that VPN and docker connectivity have been setup manually. The provisioner will go through ever record set in the `dns` sections for each server and set them to the A/ipv4 record defined in the `ip` section for that server. Existing records will be updated. IPv6/AAAA records are currently not supported for the `name` provisioner.
+
 ## Inventory
 
 The `inventory` section describes the location of the public and private Ansible inventory files. The public inventory is intended to be used when the server is first provisioned. Once Ansible roles have been run for establishing VPNs and Firewalls, the private inventory can be used for running commands via a VPN connection.
