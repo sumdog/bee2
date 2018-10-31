@@ -1,4 +1,4 @@
 language: ruby
 rvm:
  - 2.3
-script: rspec -fd
+script: bundler exec rspec -fd
