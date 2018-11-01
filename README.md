@@ -1,5 +1,9 @@
 # Bee2
 
+[![Build Status](https://travis-ci.org/sumdog/bee2.svg?branch=master)](https://travis-ci.org/sumdog/bee2)
+
+<img align="right" width="200" src="https://penguindreams.org/images/airwhale-600px.jpg">
+
 Bee2 is an experimental provisioning system for creating and configuring virtual machines with a hosting provider. At the current time, Bee2 only supports Vultr as a provider and Ansible as a provisioning system. It has default Ansible roles for provisioning Ubuntu based Docker nodes, OpenBSD e-mail servers and a FreeBSD OpenVPN gateway. It creates secure passwords with PGP keys, establishes firewalls and creates docker certs/keys for remote administration. Once the servers have been provisioned, bee2 can build and launch Docker containers, run Docker based jobs and has builtin docker files for establishing HAProxy + LetsEncrypt, and hosting static content via nginx.
 
 # Use and Design Documentation
@@ -720,15 +724,6 @@ docker:
         env: *mastodon_config
         db:
           - postgres:mastodon
-      awstats-generate:
-        build_dir: AWStatsGenerator
-        env:
-          username: djsumdog
-          password: Sum!stats
-          domains: all
-        volumes:
-          - awstats:/awstats:rw
-          - logs-web:/weblogs:ro
       logrotate:
         build_dir: LogRotate
         env:
@@ -741,7 +736,6 @@ docker:
         env:
           haproxy_container: $haproxy
           certbot_container: $certbot
-          awstats_container: $awstats
           domains: all
         volumes:
           - letsencrypt:/etc/letsencrypt:rw
@@ -834,9 +828,9 @@ docker:
 ### Starting Mastodon
 
 ```
-./bee2 -c conf/settings.conf -d web1:build
 ./bee2 -c conf/settings.conf -d web1:run:db-setup
 ./bee2 -c conf/settings.conf -d web1:run:mastodon-dbmigrate
+./bee2 -c conf/settings.conf -d web1:build
 ```
 
 # Final Thoughts
