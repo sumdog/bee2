@@ -4,7 +4,7 @@
 
 <img align="right" width="200" src="https://penguindreams.org/images/airwhale-600px.jpg">
 
-Bee2 is an experimental provisioning system for creating and configuring virtual machines with a hosting provider. At the current time, Bee2 only supports Vultr as a provider and Ansible as a provisioning system. It has default Ansible roles for provisioning Ubuntu based Docker nodes, OpenBSD e-mail servers and a FreeBSD OpenVPN gateway. It creates secure passwords with PGP keys, establishes firewalls and creates docker certs/keys for remote administration. Once the servers have been provisioned, bee2 can build and launch Docker containers, run Docker based jobs and has builtin docker files for establishing HAProxy + LetsEncrypt, and hosting static content via nginx.
+Bee2 is an experimental provisioning system for creating and configuring virtual machines with a hosting provider. It supports Vultr and Digital Ocean has hosting providers and uses Ansible as its configuration system. In addition, it can support Name.com for DNS (assumes a manually provisioned server). It has default Ansible roles for provisioning Ubuntu based Docker nodes, OpenBSD e-mail servers and a FreeBSD OpenVPN gateway. It creates secure passwords with PGP keys, establishes firewalls and creates docker certs/keys for remote administration. Once the servers have been provisioned, bee2 can build and launch Docker containers, run Docker based jobs and has builtin docker files for establishing HAProxy + LetsEncrypt, and hosting static content via nginx.
 
 # Use and Design Documentation
 
@@ -56,11 +56,29 @@ provisioner:
   ssh_key:
     public: vultr-key.pub
     private: vultr-key
+servers:
+  web1:
+    plan: 202
+    os: 270 # Ubuntu 18.04 x64
+    region: EWR
 ```
 
 ### Digital Ocean
 
-(coming soon)
+```
+provisioner:
+  type: digitalocean
+  api_key: InsertValidAPIKeyHere
+  state_file: conf/do-state.yml
+  region: tor1
+  ssh_key:
+    public: conf/do-key.pub
+    private: conf/do-key
+servers:
+  web1:
+    plan: s-1vcpu-2gb
+    os: ubuntu-18-04-x64
+```
 
 ### Name.com
 
@@ -100,7 +118,7 @@ inventory:
 
 ## Servers
 
-The `servers` section defines every virtual machine that should be provisioned. For a server on Vultr, each server will need a `plan` and `os` section. A private IP address and DNS records records can be defined in this section as well.
+The `servers` section defines every virtual machine that should be provisioned. For a server on Vultr or Digital Ocean, each server will need a `plan` and `os` section. A private IP address and DNS records records can be defined in this section as well.
 
 Anything defined in the `web` section for DNS will have a `www` record provisioned for it as well as a base record. The `HAProxySetup` and `NginxStatic` containers work together to configure both SSL redirects and redirects from `www` to the base domain.
 
