@@ -1,4 +1,5 @@
 require_relative 'provisioner'
+require 'ipaddr'
 
 class DigitalOceanProvisioner < Provisioner
 
@@ -24,18 +25,18 @@ class DigitalOceanProvisioner < Provisioner
   end
 
   def reserve_ips()
-    @config['servers'].each { |s,v|
+    @servers.each { |s,v|
       if @state['servers'].nil?
         @state['servers'] = {}
       end
       if @state['servers'][s].nil?
-          @state['servers'][s] = {}
-          @state['servers'][s]['ipv4'] = request('POST', 'floating_ips', {
+          @state['servers'][s] = { 'ipv4' => {}}
+          @state['servers'][s]['ipv4']['addr'] = request('POST', 'floating_ips', {
             'region' => @config['provisioner']['region']})['floating_ip']['ip']
-          @log.info("Reserved IPs for: #{s} / #{@state['servers'][s]['ipv4']}")
+          @log.info("Reserved IPs for: #{s} / #{@state['servers'][s]['ipv4']['addr']}")
           save_state
       else
-        @log.info("IP Already Reserved for: #{s} / #{@state['servers'][s]['ipv4']}")
+        @log.info("IP Already Reserved for: #{s} / #{@state['servers'][s]['ipv4']['addr']}")
       end
     }
   end
@@ -58,15 +59,15 @@ class DigitalOceanProvisioner < Provisioner
   end
 
   def ensure_servers
-    current_servers = request('GET', 'droplets')['droplets'].map { |k,v| v['name'] }
+    current_servers = request('GET', 'droplets')['droplets'].map { |item| item['name'] }
     create_servers = @state['servers'].keys.reject { |server| current_servers.include? server }
     create_servers.each { |server|
       @log.info("Creating #{server}")
       server_config = {
           'name' => server,
           'region' => @config['provisioner']['region'],
-          'size' => @config['servers'][server]['plan'],
-          'image' => @config['servers'][server]['os'],
+          'size' => @servers[server]['plan'],
+          'image' => @servers[server]['os'],
           'ssh_keys' => [@state['ssh_key_id']],
           'ipv6' => true,
           'private_networking' => true
@@ -78,8 +79,8 @@ class DigitalOceanProvisioner < Provisioner
       save_state
 
       wait_server(server, 'status', 'active')
-      @log.info("Assinging floating IP #{@state['servers'][server]['ipv4']} to Server")
-      request('POST', "floating_ips/#{@state['servers'][server]['ipv4']}/actions", {'type' => 'assign', 'droplet_id' => create_response['id'] })
+      @log.info("Assinging floating IP #{@state['servers'][server]['ipv4']['addr']} to Server")
+      request('POST', "floating_ips/#{@state['servers'][server]['ipv4']['addr']}/actions", {'type' => 'assign', 'droplet_id' => create_response['id'] })
     }
 
   end
@@ -98,6 +99,10 @@ class DigitalOceanProvisioner < Provisioner
       r = Net::HTTP::Post.new(uri.path, initheader = headers)
       r.body = args.to_json
       r
+    when 'PUT'
+      r = Net::HTTP::Put.new(uri.path, initheader = headers)
+      r.body = args.to_json
+      r
     when 'GET'
       path = "#{uri.path}?".concat(args.collect { |k,v| "#{k}=#{CGI::escape(v.to_s)}" }.join('&'))
       Net::HTTP::Get.new(path, initheader = headers)
@@ -106,10 +111,6 @@ class DigitalOceanProvisioner < Provisioner
     res = https.request(req)
 
     case res.code.to_i
-      # when 503
-      #   @log.warn('Rate Limit Reached. Waiting...')
-      #   sleep(2)
-      #   request(method, path, args, ok_lambda, error_code, err_lambda)
     when 200..299
         if not ok_lambda.nil?
           ok_lambda.()
@@ -134,8 +135,56 @@ class DigitalOceanProvisioner < Provisioner
   def pull_ipv6_info
     request('GET', 'droplets')['droplets'].map { |d|
       if @state['servers'].has_key?(d['name'])
-        @log.info("Server #{d['name']} IPv6 Address #{d['networks']['v6']['ip_address']}")
-        @state['servers'][d['name']]['ipv6'] = d['networks']['v6']['ip_address']
+        @log.info("Server #{d['name']} IPv6 Address #{d['networks']['v6'][0]['ip_address']}")
+        if @state['servers'][d['name']]['ipv6'].nil?
+          @state['servers'][d['name']]['ipv6'] = {}
+        end
+        ipv6 = d['networks']['v6'][0]['ip_address']
+        @state['servers'][d['name']]['ipv6']['addr'] = ipv6
+        subnet = IPAddr.new(ipv6).mask(d['networks']['v6'][0]['netmask']).to_s
+        @log.info("IPv6 Subnet #{subnet}")
+        @state['servers'][d['name']]['ipv6']['subnet'] = subnet
+      end
+    }
+    save_state
+  end
+
+  def dns_update_check(r)
+    r['name'] = r['name'] == '' ? '@' : r['name']
+    current = request('GET', "domains/#{r['domain']}/records", {})['domain_records'].find{ |c|
+      c['type'] == r['type'] and c['name'] == r['name'] and IPAddr.new(c['data']) == IPAddr.new(r['data'])
+    }
+    msg = "Domain: #{r['domain']}, Name: #{r['name']}, Type: #{r['type']}"
+    if current.nil?
+      request('POST', "domains/#{r['domain']}/records", r)
+      @log.info("Record Created :: #{msg}")
+    else
+      request('PUT', "domains/#{r['domain']}/records/#{current['id']}", r)
+      @log.info("Record Updated :: #{msg}")
+    end
+  end
+
+  def list_domain_records(domain, ok_func, err_func)
+    request('GET', "domains/#{domain}", {}, ok_func, 404, err_func)
+  end
+
+  def create_domain(domain, ip)
+    args = {'name' => domain }
+    if not ip.nil?
+      args['ip_address'] = ip
+    end
+    request('POST', 'domains', args)
+  end
+
+  def web_ipv6
+    # Broked
+    @servers.select { |name, s|
+      s['dns'].has_key?('web')
+    }.each { |name,cfg|
+      if not @state['servers'][name].has_key?('static_web')
+        ipv6 = @state['servers'][name]['ipv6']['subnet'] + cfg['ipv6']['docker']['static_web']
+        @log.info("Creating IPv6 Web IP #{ipv6} for #{name}")
+        @state['servers'][name]['ipv6']['static_web'] = ipv6
       end
     }
     save_state
@@ -144,18 +193,19 @@ class DigitalOceanProvisioner < Provisioner
   def provision(rebuild = false, server = nil)
     ensure_ssh_keys
     reserve_ips
-    pull_ipv6_info
-    # populate_ips
-    # web_ipv6
-    # if rebuild
-    #   @log.info('Rebuilding Servers')
-    #   delete_provisioned_servers
-    # end
+
+    if rebuild
+      @log.warn('Rebuilding not implemented for DigitalOcean Provisioner')
+      exit 2
+    end
+
     ensure_servers
-    # update_dns
+    pull_ipv6_info
+    web_ipv6
+    update_dns
     # cleanup_dns
     # mail_dns
-    # write_inventory
+    write_inventory
   end
 
 

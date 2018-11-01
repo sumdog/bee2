@@ -7,6 +7,7 @@ require 'cgi'
 require 'json'
 require 'openssl'
 require 'base64'
+require 'ipaddr'
 require_relative 'provisioner'
 
 class VultrProvisioner < Provisioner
@@ -16,8 +17,6 @@ class VultrProvisioner < Provisioner
   def initialize(config, log)
     super(config, log)
     @api_key = config['provisioner']['token']
-    @inventory_files = config['inventory']
-    @servers = config['servers']
     @vpn = config['openvpn']
     @ssh_key = File.read(config['provisioner']['ssh_key']['public'])
     @default_region = config['provisioner']['region']
@@ -86,46 +85,10 @@ class VultrProvisioner < Provisioner
     # remove_unwanted_ips
   end
 
-  def web_ipv6
-    @servers.select { |name, s|
-      s['dns'].has_key?('web')
-    }.each { |name,cfg|
-      if not @state['servers'][name].has_key?('static_web')
-        ipv6 = @state['servers'][name]['ipv6']['subnet'] + cfg['ipv6']['docker']['static_web']
-        @log.info("Creating IPv6 Web IP #{ipv6} for #{name}")
-        @state['servers'][name]['ipv6']['static_web'] = ipv6
-      end
+  def dns_update_check(r)
+    current = request('GET', 'dns/records', {'domain' => r['domain']}).find{ |c|
+      c['type'] == r['type'] and c['name'] == r['name'] and IPAddr.new(c['data']) == IPAddr.new(r['data'])
     }
-    save_state
-  end
-
-  def write_inventory
-    ['public', 'private'].each { |inv_type|
-      inventory_file = @inventory_files[inv_type]
-      File.open(inventory_file, 'w') { |pub|
-        @log.info("Writing #{inv_type} inventory to #{inventory_file}")
-        @servers.each { |server, settings|
-          pub.write("[#{server}]\n")
-          pub.write(settings['dns'][inv_type].first)
-          pub.write(" server_name=#{server}")
-          pub.write("\n\n")
-        }
-      }
-    }
-  end
-
-  # Convert domian array (from YAML config) to a hash from each base domain to subdomains
-  # Input: [ 'something.example.com', 'some.other.example.com', 'example.net', 'somethingelse.example.net', 'example.org' ]
-  # Output: { 'example.com' => [ 'something', 'some.other' ], 'example.net' => ['somethingelse'], 'example.org' => [] }
-  # special thanks to elomatreb on #ruby/freenode IRC
-  private def domain_records(records)
-    Hash[records.group_by {|d| d[/\w+\.\w+\z/] }.map do |suffix, domains|
-      [suffix, domains.map {|d| d.gsub(suffix, "").gsub(/\.\z/, "") }.reject {|d| d == "" }]
-    end]
-  end
-
-  private def dns_update_check(r)
-    current = request('GET', 'dns/records', {'domain' => r['domain']}).find{ |c| c['type'] == r['type'] and c['name'] == r['name'] and c['data'] == r['data'] }
     msg = "Domain: #{r['domain']}, Name: #{r['name']}, Type: #{r['type']}"
     if current.nil?
       request('POST', 'dns/create_record', r)
@@ -208,68 +171,13 @@ class VultrProvisioner < Provisioner
     }
   end
 
-  private def create_subdomains(subdomains, domain, server_config, typ_cfg)
-    subdomains.each { |s|
-      typ_cfg.map { |ip_type|
-         case ip_type
-         when 'ipv4'
-            {'domain' => domain, 'name' => s, 'type' => 'A', 'data' => server_config['ipv4']['addr'] }
-         when 'ipv6'
-            {'domain' => domain, 'name' => s, 'type' => 'AAAA', 'data' => server_config['ipv6']['addr'] }
-          when 'ipv6-web'
-             {'domain' => domain, 'name' => s, 'type' => 'AAAA', 'data' => server_config['ipv6']['static_web'] }
-         when 'private_ip'
-            {'domain' => domain, 'name' => s, 'type' => 'A', 'data' => @servers[s]['private_ip'] }
-         when 'web'
-            [{'domain' => domain, 'name' => "www.#{s}", 'type' => 'A', 'data' => server_config['ipv4']['addr'] },
-            {'domain' => domain, 'name' => "www.#{s}", 'type' => 'AAAA', 'data' => server_config['ipv6']['static_web'] }]
-         end
-      }.flatten.each { |d|
-        @log.info("Creating/Updating #{d['name']}.#{d['domain']} #{d['type']} #{d['data']}")
-        dns_update_check(d)
-      }
-    }
+  def list_domain_records(domain, ok_func, err_func)
+    request('GET', 'dns/records', {'domain' => domain}, ok_func, 412, err_func)
   end
 
-  def update_dns
-    current_dns = request('GET', 'dns/list')
-    @state['servers'].each { |server, config|
-      dns_sets = {"public"=>["ipv4", "ipv6"], "private"=>["private_ip"], "web"=>["ipv4", "ipv6-web", "web"]}
-      ipv4 = @state['servers'][server]['ipv4']['addr']
-      ipv6 = @state['servers'][server]['ipv6']['addr']
-      dns_sets.each { |ds_type, typ_cfg|
-        records = @servers[server]['dns'][ds_type]
-
-        if ds_type == 'web'
-          ipv6 = @state['servers'][server]['ipv6']['static_web']
-        end
-
-        if not records.nil?
-          domain_records(records).each { |domain, subdomains|
-            request('GET', 'dns/records', {'domain' => domain}, -> {
-              @log.info("Domain #{domain} exists")
-              if ds_type == 'web'
-                  dns_update_check({'domain' => domain, 'name' => '', 'type' => 'A', 'data' => ipv4 })
-                  dns_update_check({'domain' => domain, 'name' => '', 'type' => 'AAAA', 'data' => ipv6 })
-                  create_subdomains(['www'], domain, config, ['ipv4', 'ipv6-web'])
-              end
-              create_subdomains(subdomains, domain, config, typ_cfg)
-            }, 412, -> {
-              @log.info("No records for #{domain}. Creating Base Record.")
-              if ds_type == 'web'
-                @log.debug("IP Map: #{server} -> #{ipv4}/#{ipv6}")
-                request('POST', 'dns/create_domain', {'domain' => domain, 'serverip' => ipv4 })
-                dns_update_check({'domain' => domain, 'name' => '', 'type' => 'AAAA', 'data' => ipv6 })
-                create_subdomains(['www'], domain, config, ['ipv4', 'ipv6-web'])
-              else
-                request('POST', 'dns/create_domain', {'domain' => domain, 'serverip' => '127.0.0.1' })
-              end
-              create_subdomains(subdomains, domain, config, typ_cfg)
-            })
-          }
-        end
-      }
-    }
+  def create_domain(domain, ip)
+    ip = ip.nil? ? '127.0.0.1' : ip
+    request('POST', 'dns/create_domain', {'domain' => domain, 'serverip' => ip })
   end
 
   def region_for_server(server)
