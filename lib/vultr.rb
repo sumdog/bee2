@@ -87,7 +87,7 @@ class VultrProvisioner < Provisioner
 
   def dns_update_check(r)
     current = request('GET', 'dns/records', {'domain' => r['domain']}).find{ |c|
-      c['type'] == r['type'] and c['name'] == r['name'] and IPAddr.new(c['data']) == IPAddr.new(r['data'])
+      c['type'] == r['type'] and c['name'] == r['name'] and c['data'] == r['data']
     }
     msg = "Domain: #{r['domain']}, Name: #{r['name']}, Type: #{r['type']}"
     if current.nil?
