@@ -1,4 +1,4 @@
-proxy ens3 {
+proxy {{ public_eth }} {
   timeout 500
   ttl 30000
   rule {{ state.servers[ansible_hostname].ipv6.subnet }}/80 {

@@ -11,7 +11,7 @@
     template: src=ndppd.conf.j2 dest={{ ndppd_conf }} owner=root group=root mode=0644
 
   - name: Enable proxy_ndp for public adapter
-    sysctl: name=net.ipv6.conf.ens3.proxy_ndp value=1 state=present
+    sysctl: name="net.ipv6.conf.{{ public_eth }}.proxy_ndp" value=1 state=present
 
   - name: Restart ndppd Service
     service: name=ndppd state=restarted
