@@ -24,6 +24,18 @@ class DigitalOceanProvisioner < Provisioner
     end
   end
 
+  # Digital Ocean's default image forces an interactive root password reset
+  # breaking automatic provisioning
+  #  see: https://www.digitalocean.com/community/questions/how-to-remove-reset-root-password
+  private def initial_user_data()
+    rand_password = ('a'..'z').to_a.shuffle[0,20].join
+    user_data = <<-USER_DATA
+#cloud-config
+runcmd:
+  - echo root:#{rand_password} | chpasswd
+    USER_DATA
+  end
+
   def reserve_ips()
     @servers.each { |s,v|
       if @state['servers'].nil?
@@ -70,7 +82,8 @@ class DigitalOceanProvisioner < Provisioner
           'image' => @servers[server]['os'],
           'ssh_keys' => [@state['ssh_key_id']],
           'ipv6' => true,
-          'private_networking' => true
+          'private_networking' => true,
+          'user_data' => initial_user_data
       }
 
       create_response = request('POST', 'droplets', server_config)['droplet']
