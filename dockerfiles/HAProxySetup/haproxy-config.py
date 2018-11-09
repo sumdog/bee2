@@ -20,6 +20,7 @@ defaults
     timeout connect 5000
     timeout client 50000
     timeout server 50000
+    timeout tunnel 3600s
     #errorfile 400 /usr/local/etc/haproxy/errors/400.http
     #errorfile 403 /usr/local/etc/haproxy/errors/403.http
     #errorfile 408 /usr/local/etc/haproxy/errors/408.http
