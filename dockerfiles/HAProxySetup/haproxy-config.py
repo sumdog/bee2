@@ -85,7 +85,7 @@ def awstats_backend():
     if environ['AWSTATS_CONTAINER'] != 'disabled':
         return """
             backend bk_awstats
-                server awstats {}:8080
+                server awstats {}:8080 init-addr libc,none check
         """.format(environ['AWSTATS_CONTAINER'])
     else:
         return ""
