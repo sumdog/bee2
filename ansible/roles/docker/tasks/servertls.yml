@@ -4,7 +4,7 @@
       creates: "{{ docker_ca_key }}"
 
   - name: Create Docker CA Public Key
-    command: openssl req -new -x509 -days 365 -key {{ docker_ca_key }} -sha256 -out  {{ docker_ca }} -subj "/CN=docker-ca"
+    command: openssl req -new -x509 -days {{ cert_expire }} -key {{ docker_ca_key }} -sha256 -out  {{ docker_ca }} -subj "/CN=docker-ca"
     args:
       creates: "{{ docker_ca }}"
 
@@ -28,7 +28,7 @@
     template: src=extfile.cnf.j2 dest={{ ext_file }} owner=root group=root mode=0600
 
   - name: Sign Docker Server Key
-    command: openssl x509 -req -days 365 -sha256 -in {{ server_csr }} -CA {{ docker_ca }} -CAkey {{ docker_ca_key }} -CAcreateserial -out {{ server_crt }} -extfile {{ ext_file }}
+    command: openssl x509 -req -days {{ cert_expire }} -sha256 -in {{ server_csr }} -CA {{ docker_ca }} -CAkey {{ docker_ca_key }} -CAcreateserial -out {{ server_crt }} -extfile {{ ext_file }}
     args:
       creates: "{{ server_crt }}"
 
