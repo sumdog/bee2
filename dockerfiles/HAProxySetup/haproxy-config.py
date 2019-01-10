@@ -64,7 +64,7 @@ frontend https
 
 
 backend bk_letsencrypt
-    server certbot {}:8080
+    server certbot {}:8080 init-addr libc,none check
 {}
 backend bk_ssl_default
     server default_ssl 127.0.0.1:8080
