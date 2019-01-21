@@ -80,6 +80,11 @@ RSpec.describe DockerHandler do
               - dyject.com/80
               - penguindreams.org/9000
               - rearviewmirror.cc
+        pixels:
+          git: git@pixels
+          branch: docker
+          git_dir: system/dockerfiles
+          dockerfile: Dockerfile.apache
         haproxy:
           ipv6_web: true
           git: git@someplace
@@ -209,6 +214,15 @@ RSpec.describe DockerHandler do
       expect(r["#{prefix}-app-nginx-static"]['git']).to eq('git@someplace')
       expect(r["#{prefix}-app-nginx-static"]['branch']).to eq('dev')
       expect(r["#{prefix}-app-nginx-static"]['git_dir']).to eq('system/docker')
+    end
+    it "clones a git report with a branch, subdirectory and specific dockerfile" do
+      r = config_web1.config_to_containers('apps', 'pixels')
+      expect(r["#{prefix}-app-pixels"]['image']).to be_nil
+      expect(r["#{prefix}-app-pixels"]['build_dir']).to be_nil
+      expect(r["#{prefix}-app-pixels"]['git']).to eq('git@pixels')
+      expect(r["#{prefix}-app-pixels"]['branch']).to eq('docker')
+      expect(r["#{prefix}-app-pixels"]['git_dir']).to eq('system/dockerfiles')
+      expect(r["#{prefix}-app-pixels"]['dockerfile']).to eq('Dockerfile.apache')
     end
   end
 

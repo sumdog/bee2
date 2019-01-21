@@ -8,6 +8,13 @@ require 'json'
 require_relative 'passstore'
 require_relative 'util'
 
+module Docker::Util
+  def self.remove_ignored_files!(directory, files)
+    # Remove this function as it breaks compatiablity
+    # with the docker CLI; discovered with Pixelfed
+  end
+end
+
 class DockerHandler
 
   private def usage()
@@ -308,6 +315,7 @@ Usage: bee2 -c <config> -d COMMAND
         cfg.fetch('git', nil),
         cfg.fetch('branch', nil),
         cfg.fetch('git_dir', nil),
+        cfg.fetch('dockerfile', nil),
         cfg.fetch('ports', nil),
         transform_envs(name, cfg.fetch('env', []), tcfg[:prefix]),
         cfg.fetch('volumes', nil),
@@ -317,7 +325,7 @@ Usage: bee2 -c <config> -d COMMAND
     }.inject(&:merge)
   end
 
-  def create_container(name, image, cprefix, cmd, build_dir, git, branch, git_dir, ports, env, volumes, ipv4, static_ipv6 = nil)
+  def create_container(name, image, cprefix, cmd, build_dir, git, branch, git_dir, dockerfile, ports, env, volumes, ipv4, static_ipv6 = nil)
     {
      name => {
        'image' => image,
@@ -325,6 +333,7 @@ Usage: bee2 -c <config> -d COMMAND
        'git' => git,
        'branch' => branch,
        'git_dir' => git_dir,
+       'dockerfile' => dockerfile,
        'container_args' => {
          "RestartPolicy": { "Name": "unless-stopped" },
          'Env' => env,
@@ -368,16 +377,24 @@ Usage: bee2 -c <config> -d COMMAND
             git = Git.clone(params['git'], '.', :path => git_dir)
             if params.key?('branch')
               @log.info("Using branch #{params['branch']}")
-              git.branches[params['branch']].checkout()
+              #git.branches[params['branch']].checkout()
+              # Allows checkout of a branch or tag
+              git.checkout(params['branch'])
             end
+            docker_dir = nil
+            docker_params = {}
             if params.key?('git_dir')
-              docker_dir = File.join(git_dir, params['git_dir'])
               @log.info("Creating Image for #{params['git']}/#{params['git_dir']}")
-              Docker::Image.build_from_dir(docker_dir).id
+              docker_dir = File.join(git_dir, params['git_dir'])
             else
               @log.info("Creating Image for #{params['git']}")
-              Docker::Image.build_from_dir(git_dir).id
+              docker_dir = git_dir
             end
+            if params.key?('dockerfile')
+              @log.info("Using custom dockerfile: #{params['dockerfile']}")
+              docker_params['dockerfile'] = params['dockerfile']
+            end
+            Docker::Image.build_from_dir(docker_dir, docker_params).id
           }
         when params.key?('image')
           @log.info("Pulling Image #{params['image']}")
