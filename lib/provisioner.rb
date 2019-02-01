@@ -26,7 +26,7 @@ class Provisioner
     end]
   end
 
-  def create_subdomains(subdomains, domain, server_config, typ_cfg)
+  def create_subdomains(server_name, subdomains, domain, server_config, typ_cfg)
     subdomains.each { |s|
       typ_cfg.map { |ip_type|
          case ip_type
@@ -37,7 +37,7 @@ class Provisioner
           when 'ipv6-web'
              {'domain' => domain, 'name' => s, 'type' => 'AAAA', 'data' => server_config['ipv6']['static_web'] }
          when 'private_ip'
-            {'domain' => domain, 'name' => s, 'type' => 'A', 'data' => @servers[s]['private_ip'] }
+            {'domain' => domain, 'name' => s, 'type' => 'A', 'data' => @servers[server_name]['private_ip'] }
          when 'web'
             [{'domain' => domain, 'name' => "www.#{s}", 'type' => 'A', 'data' => server_config['ipv4']['addr'] },
             {'domain' => domain, 'name' => "www.#{s}", 'type' => 'AAAA', 'data' => server_config['ipv6']['static_web'] }]
@@ -83,20 +83,20 @@ class Provisioner
               if ds_type == 'web'
                   dns_update_check({'domain' => domain, 'name' => '', 'type' => 'A', 'data' => ipv4 })
                   dns_update_check({'domain' => domain, 'name' => '', 'type' => 'AAAA', 'data' => ipv6 })
-                  create_subdomains(['www'], domain, config, ['ipv4', 'ipv6-web'])
+                  create_subdomains(server, ['www'], domain, config, ['ipv4', 'ipv6-web'])
               end
-              create_subdomains(subdomains, domain, config, typ_cfg)
+              create_subdomains(server, subdomains, domain, config, typ_cfg)
             }, -> {
               @log.info("No records for #{domain}. Creating Base Record.")
               if ds_type == 'web'
                 @log.debug("IP Map: #{server} -> #{ipv4}/#{ipv6}")
                 create_domain(domain, ipv4)
                 dns_update_check({'domain' => domain, 'name' => '', 'type' => 'AAAA', 'data' => ipv6 })
-                create_subdomains(['www'], domain, config, ['ipv4', 'ipv6-web'])
+                create_subdomains(server, ['www'], domain, config, ['ipv4', 'ipv6-web'])
               else
                 create_domain(domain, nil)
               end
-              create_subdomains(subdomains, domain, config, typ_cfg)
+              create_subdomains(server, subdomains, domain, config, typ_cfg)
             })
           }
         end
