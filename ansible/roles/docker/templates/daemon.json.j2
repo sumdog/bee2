@@ -6,5 +6,6 @@
 	"tlskey": "{{ server_key }}",
 	"ipv6": true,
 	"fixed-cidr-v6": "{{ docker_ipv6_cidr }}",
-	"hosts": ["127.0.0.1:2376", "{{ private_ip }}:2376", "fd://"]
+	"hosts": ["127.0.0.1:2376", "{{ private_ip }}:2376", "fd://"],
+	"storage-driver": "overlay2"
 }
