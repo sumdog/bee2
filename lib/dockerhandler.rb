@@ -335,7 +335,6 @@ Usage: bee2 -c <config> -d COMMAND
        'git_dir' => git_dir,
        'dockerfile' => dockerfile,
        'container_args' => {
-         "RestartPolicy": { "Name": "unless-stopped" },
          'Env' => env,
          'Cmd' => (cmd.split(' ') if not cmd.nil?),
          'NetworkingConfig' =>
@@ -348,6 +347,7 @@ Usage: bee2 -c <config> -d COMMAND
            },
          'ExposedPorts' => (ports.map { |port| {"#{port}/tcp" => {}}}.inject(:merge) if not ports.nil?),
          'HostConfig' => {
+           'RestartPolicy' => { 'Name' => 'unless-stopped' },
            'Binds' => (volumes if not volumes.nil?),
            'PortBindings' => (ports.map { |port| {
              "#{port}/tcp" => [
