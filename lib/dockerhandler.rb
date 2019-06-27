@@ -347,7 +347,7 @@ Usage: bee2 -c <config> -d COMMAND
            },
          'ExposedPorts' => (ports.map { |port| {"#{port}/tcp" => {}}}.inject(:merge) if not ports.nil?),
          'HostConfig' => {
-           'RestartPolicy' => { 'Name' => 'unless-stopped' },
+           'RestartPolicy' => { 'Name' => (cprefix == 'app' ? 'unless-stopped' : 'no') },
            'Binds' => (volumes if not volumes.nil?),
            'PortBindings' => (ports.map { |port| {
              "#{port}/tcp" => [

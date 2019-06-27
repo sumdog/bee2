@@ -50,8 +50,7 @@ WORKDIR pleroma
 # ARG __BUST_CACHE
 # ENV __BUST_CACHE $__BUST_CACHE
 
-RUN git clone -b develop https://git.pleroma.social/pleroma/pleroma.git /pleroma \
-    && git checkout ${PLEROMA_VER}
+RUN git clone -b develop https://git.pleroma.social/pleroma/pleroma.git /pleroma
 
 # Config helper
 COPY --chown=pleroma:pleroma ./docker-config.exs /docker-config.exs

@@ -287,7 +287,7 @@ RSpec.describe DockerHandler do
       expect(host_config).to have_key("#{prefix}-network")
     end
 
-    it "has correct restart policy" do
+    it "has correct restart policy for applications" do
       cfg_yaml['docker']['web1']['applications'].each{ |a,_|
         r = config_web1.config_to_containers('apps',a)
         host_config = r["#{prefix}-app-#{a}"]['container_args']['HostConfig']
@@ -297,6 +297,19 @@ RSpec.describe DockerHandler do
         r = config_web2.config_to_containers('apps',a)
         host_config = r["#{prefix2}-app-#{a}"]['container_args']['HostConfig']
         expect(host_config['RestartPolicy']['Name']).to eq('unless-stopped')
+      }
+    end
+
+    it "has correct restart policy for jobs" do
+      cfg_yaml['docker']['web1']['jobs'].each{ |a,_|
+        r = config_web1.config_to_containers('jobs',a)
+        host_config = r["#{prefix}-job-#{a}"]['container_args']['HostConfig']
+        expect(host_config['RestartPolicy']['Name']).to eq('no')
+      }
+      cfg_yaml['docker']['web2']['jobs'].each{ |a,_|
+        r = config_web2.config_to_containers('jobs',a)
+        host_config = r["#{prefix2}-job-#{a}"]['container_args']['HostConfig']
+        expect(host_config['RestartPolicy']['Name']).to eq('no')
       }
     end
 
