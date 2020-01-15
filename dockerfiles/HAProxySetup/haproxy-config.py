@@ -28,9 +28,9 @@ defaults
     #errorfile 502 /usr/local/etc/haproxy/errors/502.http
     #errorfile 503 /usr/local/etc/haproxy/errors/503.http
     #errorfile 504 /usr/local/etc/haproxy/errors/504.http
-    maxconn 4096
+    #maxconn 4096
     mode http
-    option http-server-close
+    option http-keep-alive
 
 frontend http
     bind :::80 v4v6
