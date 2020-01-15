@@ -5,8 +5,13 @@
 # License: GNU GPLv3
 
 import http.server
+import socket
 import socketserver
 from os import environ as env
+
+
+class HTTPServerV6(http.server.HTTPServer):
+    address_family = socket.AF_INET6
 
 
 class RedirectHandler(http.server.SimpleHTTPRequestHandler):
@@ -44,5 +49,5 @@ class RedirectHandler(http.server.SimpleHTTPRequestHandler):
 if __name__ == '__main__':
 
     handler = RedirectHandler
-    httpd = http.server.HTTPServer(('', 8080), handler)
+    httpd = HTTPServerV6(('::', 8080), handler)
     httpd.serve_forever()
