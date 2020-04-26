@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from os import path, environ
+from os import path, environ, unlink
 from time import sleep
 from subprocess import call
 from sys import stderr
@@ -58,6 +58,9 @@ if __name__ == '__main__':
                 call(['/opt/reload-haproxy.sh'])
             else:
                 stderr.write('Error running certbot. Skipping {}\n'.format(domain))
+
+        print('Removing README from live directory')
+        unlink(path.join(CERT_BASE, 'README'))
 
         print('Sleeping {} minutes...'.format(renew))
         sleep(renew * 60)
