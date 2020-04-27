@@ -51,7 +51,7 @@ class NameProvisioner < Provisioner
         if not error_code.nil? and res.code.to_i == error_code
           err_lambda.()
         else
-          @log.fatal('Error Executing Exoscale Command. Aborting...')
+          @log.fatal('Error Executing Name Command. Aborting...')
           @log.fatal("#{res.code} :: #{res.body}")
           exit(2)
         end
@@ -66,20 +66,28 @@ class NameProvisioner < Provisioner
 
           api_call = "domains/#{Util.base_domain(domain)}/records"
           existing = request('GET', api_call)
-          cur = existing['records'].select { |r| r['fqdn'] == "#{domain}." }.first
-          cur_ip = @config['servers'][server]['ip'][dns_set]
-          params = {'host' => Util.host_domain(domain), 'type' => 'A', 'answer' => cur_ip, 'ttl'=>'300'}
-          log_msg = "#{cur_ip} :: #{domain}"
+          cur = existing.fetch('records', {}).select { |r| r['fqdn'] == "#{domain}." }.first
 
-          if cur.nil?
-            @log.info("Creating #{log_msg}")
-            request('POST', api_call, params)
-          elsif cur['answer'] == cur_ip
-            @log.info("DNS Correct. Skipping #{log_msg}")
-          else
-            @log.info("Updating #{log_msg}")
-            request('PUT', "#{api_call}/#{cur['id']}", params)
-          end
+          {'ipv4':'A', 'ipv6': 'AAAA'}.each { |ipv, record_type|
+            ipv = ipv.to_s
+            if @config['servers'][server]['ip'][dns_set].include?(ipv)
+              cur_ip = @config['servers'][server]['ip'][dns_set][ipv]
+              params = {'host' => Util.host_domain(domain), 'type' => record_type, 'answer' => cur_ip, 'ttl'=>'300'}
+              log_msg = "#{cur_ip} :: #{domain}"
+
+              if cur.nil?
+                @log.info("Creating #{log_msg}")
+                request('POST', api_call, params)
+              elsif cur['answer'] == cur_ip
+                @log.info("DNS Correct. Skipping #{log_msg}")
+              else
+                @log.info("Updating #{log_msg}")
+                request('PUT', "#{api_call}/#{cur['id']}", params)
+              end
+            else
+              @log.warn("No #{ipv} records for #{dns_set}")
+            end
+          }
         }
       }
     }
