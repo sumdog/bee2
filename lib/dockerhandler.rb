@@ -307,10 +307,19 @@ Usage: bee2 -c <config> -d COMMAND
         static_ipv6 = "#{ipv6_subet}#{ipv6_web}"
       end
 
-      create_container("#{@prefix}-#{tcfg[:prefix]}-#{name}",
+      # Multiple Defined Networks
+      network = @network
+      l_prefix = @prefix
+      if cfg.has_key?('network')
+        network = "#{l_prefix}-#{cfg['network']}"
+        l_prefix = network
+      end
+
+      create_container("#{l_prefix}-#{tcfg[:prefix]}-#{name}",
         cfg.fetch('image', nil),
         tcfg[:prefix],
         cfg.fetch('cmd', nil),
+        network,
         build_dir,
         cfg.fetch('git', nil),
         cfg.fetch('branch', nil),
@@ -325,7 +334,7 @@ Usage: bee2 -c <config> -d COMMAND
     }.inject(&:merge)
   end
 
-  def create_container(name, image, cprefix, cmd, build_dir, git, branch, git_dir, dockerfile, ports, env, volumes, ipv4, static_ipv6 = nil)
+  def create_container(name, image, cprefix, cmd, network, build_dir, git, branch, git_dir, dockerfile, ports, env, volumes, ipv4, static_ipv6 = nil)
     {
      name => {
        'image' => image,
@@ -339,7 +348,7 @@ Usage: bee2 -c <config> -d COMMAND
          'Cmd' => (cmd.split(' ') if not cmd.nil?),
          'NetworkingConfig' =>
            {'EndpointsConfig' =>
-             {@network =>
+             {network =>
                {
                  'IPAMConfig' => {'IPv6Address' => static_ipv6 }.reject{ |k,v| v.nil? }
                }
