@@ -74,7 +74,8 @@ Usage: bee2 -c <config> -d COMMAND
 
 
     if cmds[1] != 'test'
-      establish_network
+      establish_default_network
+      establish_other_networks
     end
 
     case cmds[1]
@@ -101,7 +102,50 @@ Usage: bee2 -c <config> -d COMMAND
     end
   end
 
-  def establish_network
+  def establish_other_networks
+    config_for_networks.each { |name, docker_cfg|
+      net_name = "#{@prefix}-#{name}"
+      if Docker::Network.all.select { |n| n.info['Name'] == net_name }.empty?
+        # Logging only variables
+        pub_ip4 = docker_cfg.fetch('Options', {}).fetch('com.docker.network.bridge.host_binding_ipv4', nil)
+        p_msg = pub_ip4.nil? ? 'private' : "public_ip: #{pub_ip4}"
+        msq = docker_cfg.fetch('Options', {}).fetch('com.docker.network.bridge.enable_ip_masquerade', false)
+        m_msg = msq.nil? ? '' : '(masquerade disabled)'
+        subnets = docker_cfg.fetch('IPAM', {}).fetch('Config', {}).map{ |n| n['Subnet']}.join(',')
+        @log.info("Creating network #{net_name} subnets: #{subnets} #{docker_cfg['ipv6']} #{p_msg} #{m_msg}")
+        require 'excon'
+        begin
+          Docker::Network.create(net_name, docker_cfg)
+        rescue Excon::Error::Forbidden => e
+          @log.error(e.response)
+          raise e
+        end
+      end
+    }
+  end
+
+  def config_for_networks
+    @config.fetch('docker',{}).fetch(@server, {}).fetch('networks',{}).map { |name, cfg|
+      [name,
+        { "EnableIPv6" => cfg.has_key?('ipv6'),
+          "IPAM" => {"Config" => [
+            {"Subnet" => cfg['ipv6']},
+            {"Subnet" => cfg['ipv4']}
+          ].reject{|s| s['Subnet'].nil?}},
+          "Options" => {
+            "com.docker.network.bridge.host_binding_ipv4" =>
+                @config.fetch('servers', {}).fetch(@server, {})
+                    .fetch('ip',{}).fetch(name, {}).fetch('ipv4', nil),
+            "com.docker.network.bridge.enable_ip_masquerade" => cfg['masquerade'] == false ? "false" : nil,
+            "com.docker.network.bridge.name" => cfg.fetch('bridge', nil),
+            "com.docker.network.container_interface_prefix" => cfg.fetch('ifprefix', nil)
+          }.reject{ |k,v| v.nil? }
+        }
+      ]
+    }.to_h
+  end
+
+  def establish_default_network
     if not state.fetch('servers', {}).fetch(@server, {}).fetch('ipv6', {}).empty?
       ipv6_subet = state['servers'][@server]['ipv6']['subnet']
       ipv6_suffix = @config['servers'][@server]['ipv6']['docker']['suffix_net']

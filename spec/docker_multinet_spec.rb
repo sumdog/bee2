@@ -33,6 +33,8 @@ servers:
       anon:
         ipv4: 1.2.3.4
         ipv6: a:b:c:ffe
+      nosix:
+        ipv4: 169.198.10.1
       private:
         ipv4: 10.10.100.1
 docker:
@@ -43,10 +45,17 @@ docker:
         ipv4: 172.20.0.1
         ipv6: fd00:20:10aa::/48
         masquerade: off
+        bridge: br10
       anon:
         ipv4: 172.30.0.1
-        ipv6: fd00:20:10aa::/48
+        ipv6: fd00:30:10bb::/48
         masquerade: off
+        bridge: br11
+      nosix:
+        ipv4: 10.9.8.1
+      onlysix:
+        ipv6: fd00:10:9988::/48
+        bridge: br10
     jobs:
       goodjob:
         image: nginx
@@ -73,6 +82,7 @@ NETCONFIG
 
   cfg_yaml = YAML.load(multi_net)
   config_leo = DockerHandler.new(cfg_yaml, log, 'leaderone:test', MockPassStore.new)
+  cfg_nets = config_leo.config_for_networks
 
   describe "networking mapping" do
 
@@ -107,6 +117,62 @@ NETCONFIG
       t = config_leo.config_to_containers('jobs', 'ujob')
       t_config = t["am-job-ujob"]['container_args']['NetworkingConfig']['EndpointsConfig']
       expect(t_config).to have_key("am-network")
+    end
+
+  end
+
+
+  describe "network creations" do
+
+    it "creates all user defined networks" do
+      expect(cfg_nets.size).to be(4)
+    end
+
+    it "correctly enable IPv6" do
+      expect(cfg_nets['public']['EnableIPv6']).to be(true)
+      expect(cfg_nets['anon']['EnableIPv6']).to be(true)
+      expect(cfg_nets['nosix']['EnableIPv6']).to be(false)
+      expect(cfg_nets['onlysix']['EnableIPv6']).to be(true)
+    end
+
+    it "setups up subnets for each network" do
+      expect(cfg_nets['public']['IPAM']['Config'].size).to be(2)
+      expect(cfg_nets['public']['IPAM']['Config']).to include({"Subnet" => "fd00:20:10aa::/48"})
+      expect(cfg_nets['public']['IPAM']['Config']).to include({"Subnet" => "172.20.0.1"})
+      expect(cfg_nets['anon']['IPAM']['Config'].size).to be(2)
+      expect(cfg_nets['anon']['IPAM']['Config']).to include({"Subnet" => "fd00:30:10bb::/48"})
+      expect(cfg_nets['anon']['IPAM']['Config']).to include({"Subnet" => "172.30.0.1"})
+      expect(cfg_nets['nosix']['IPAM']['Config'].size).to be(1)
+      expect(cfg_nets['nosix']['IPAM']['Config']).to include({"Subnet" => "10.9.8.1"})
+      expect(cfg_nets['onlysix']['IPAM']['Config'].size).to be(1)
+      expect(cfg_nets['onlysix']['IPAM']['Config']).to include({"Subnet" => "fd00:10:9988::/48"})
+    end
+
+    it "binds to public ipv4 address if defined" do
+      expect(cfg_nets['public']['Options']['com.docker.network.bridge.host_binding_ipv4']).to eq('10.20.30.40')
+      expect(cfg_nets['anon']['Options']['com.docker.network.bridge.host_binding_ipv4']).to eq('1.2.3.4')
+      expect(cfg_nets['nosix']['Options']['com.docker.network.bridge.host_binding_ipv4']).to eq('169.198.10.1')
+      expect(cfg_nets['onlysix']['Options']['com.docker.network.bridge.host_binding_ipv4']).to be_nil
+    end
+
+    it "corrects enables masquerade" do
+      expect(cfg_nets['public']['Options']['com.docker.network.bridge.enable_ip_masquerade']).to eq("false")
+      expect(cfg_nets['anon']['Options']['com.docker.network.bridge.enable_ip_masquerade']).to eq("false")
+      expect(cfg_nets['nosix']['Options']['com.docker.network.bridge.enable_ip_masquerade']).to be_nil
+      expect(cfg_nets['onlysix']['Options']['com.docker.network.bridge.enable_ip_masquerade']).to be_nil
+    end
+
+    it "selects the correct bridge" do
+      expect(cfg_nets['public']['Options']['com.docker.network.bridge.name']).to eq("br10")
+      expect(cfg_nets['anon']['Options']['com.docker.network.bridge.name']).to eq("br11")
+      expect(cfg_nets['nosix']['Options']['com.docker.network.bridge.name']).to be_nil
+      expect(cfg_nets['onlysix']['Options']['com.docker.network.bridge.name']).to eq("br10")
+    end
+
+    it "selects the correct bridge name" do
+    end
+
+    it "selects the correct virtual adapter prefix" do
     end
 
   end
