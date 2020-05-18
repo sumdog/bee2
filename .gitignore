@@ -2,3 +2,5 @@ bin
 conf/*
 ansible/*.retry
 .bundle
+.idea
+conf
