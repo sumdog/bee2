@@ -16,4 +16,4 @@ local_client_key: "../conf/docker/{{ ansible_hostname }}/docker-client.pem"
 local_ca: "../conf/docker/{{ ansible_hostname }}/ca.crt"
 provisioner_state_file: "../{{ provisioner.state_file }}"
 docker_ipv6_cidr: "{{ state.servers[ansible_hostname].ipv6.subnet }}{{ servers[ansible_hostname].ipv6.docker.suffix_bridge }}"
-cert_expire: 3000
+cert_expire: 6000
