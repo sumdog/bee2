@@ -78,6 +78,12 @@ docker:
         network: anon
       disconbot:
         image: foo:lts
+      frontendbot:
+        image: bee
+        network: public
+        ports:
+          - 10
+          - 4410
 NETCONFIG
 
   cfg_yaml = YAML.load(multi_net)
@@ -87,7 +93,6 @@ NETCONFIG
   describe "networking mapping" do
 
     it "adds a network to an applications that requests it" do
-
       r = config_leo.config_to_containers('apps', 'superbot')
       r_config = r["am-public-app-superbot"]['container_args']['NetworkingConfig']['EndpointsConfig']
       expect(r_config).to have_key("am-public")
@@ -169,10 +174,15 @@ NETCONFIG
       expect(cfg_nets['onlysix']['Options']['com.docker.network.bridge.name']).to eq("br10")
     end
 
-    it "selects the correct bridge name" do
-    end
-
-    it "selects the correct virtual adapter prefix" do
+    it "adds the bound IPv6 Address" do
+      s = config_leo.config_to_containers('apps', 'frontendbot')
+      expect(s["am-public-app-frontendbot"]['container_args']['HostConfig']['PortBindings']).to eq(
+        {"10/tcp"=>
+          [{'HostPort'=>'10'},{'HostPort'=>'10', 'HostIp'=>'a:b:c:d102'}],
+        "4410/tcp"=>
+          [{'HostPort'=>'4410'},{'HostPort'=>'4410', 'HostIp'=>'a:b:c:d102'}]
+        }
+      )
     end
 
   end

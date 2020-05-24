@@ -359,6 +359,8 @@ Usage: bee2 -c <config> -d COMMAND
         l_prefix = network
       end
 
+      ipv6addr = @config.fetch('servers', {}).fetch(@server, {}).fetch('ip', {}).fetch(cfg['network'], {}).fetch('ipv6', nil)
+
       create_container("#{l_prefix}-#{tcfg[:prefix]}-#{name}",
         cfg.fetch('image', nil),
         tcfg[:prefix],
@@ -373,12 +375,15 @@ Usage: bee2 -c <config> -d COMMAND
         transform_envs(name, cfg.fetch('env', []), tcfg[:prefix]),
         cfg.fetch('volumes', nil),
         cfg.fetch('ipv4', nil),
+        # ipv6 addr is for the public network IPv6 NAT
+        # static_ipv6 is for assinging a pulic IPv6 address to a container without IPv6 NAT
+        ipv6addr,
         static_ipv6
       )
     }.inject(&:merge)
   end
 
-  def create_container(name, image, cprefix, cmd, network, build_dir, git, branch, git_dir, dockerfile, ports, env, volumes, ipv4, static_ipv6 = nil)
+  def create_container(name, image, cprefix, cmd, network, build_dir, git, branch, git_dir, dockerfile, ports, env, volumes, ipv4, ipv6, static_ipv6 = nil)
     {
      name => {
        'image' => image,
@@ -402,12 +407,15 @@ Usage: bee2 -c <config> -d COMMAND
          'HostConfig' => {
            'RestartPolicy' => { 'Name' => (cprefix == 'app' ? 'unless-stopped' : 'no') },
            'Binds' => (volumes if not volumes.nil?),
-           'PortBindings' => (ports.map { |port| {
-             "#{port}/tcp" => [
-               # TODO: this will break with certain ipv4/v6 combinations that are outside of my use cases
-               # see docker_spec.rb
-               { 'HostPort' => "#{port}", 'HostIp' => ipv4 }.reject{ |k,v| v.nil? }
-             ]}
+           'PortBindings' => (ports.map { |port|
+             {
+               "#{port}/tcp" => [
+                 # TODO: this will break with certain ipv4/v6 combinations that are outside of my use cases
+                 # see docker_spec.rb
+                 { 'HostPort' => "#{port}", 'HostIp' => ipv4 }.reject{ |k,v| v.nil? },
+                 { 'HostPort' => "#{port}", 'HostIp' => ipv6 }
+               ].reject{ |v| v.has_key?('HostIp') and v['HostIp'].nil? }
+             }.reject{ |k,v| v.nil? }
            }.inject(:merge) if not ports.nil?)
          }.reject{ |k,v| v.nil? }
        }.reject{ |k,v| v.nil? }
