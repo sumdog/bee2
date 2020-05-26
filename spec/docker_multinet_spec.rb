@@ -94,21 +94,21 @@ NETCONFIG
 
     it "adds a network to an applications that requests it" do
       r = config_leo.config_to_containers('apps', 'superbot')
-      r_config = r["am-public-app-superbot"]['container_args']['NetworkingConfig']['EndpointsConfig']
+      r_config = r["am-app-superbot"]['container_args']['NetworkingConfig']['EndpointsConfig']
       expect(r_config).to have_key("am-public")
 
       s = config_leo.config_to_containers('apps', 'hiddenbot')
-      s_config = s["am-anon-app-hiddenbot"]['container_args']['NetworkingConfig']['EndpointsConfig']
+      s_config = s["am-app-hiddenbot"]['container_args']['NetworkingConfig']['EndpointsConfig']
       expect(s_config).to have_key("am-anon")
     end
 
     it "adds a network to a job that requests it" do
       r = config_leo.config_to_containers('jobs', 'goodjob')
-      r_config = r["am-public-job-goodjob"]['container_args']['NetworkingConfig']['EndpointsConfig']
+      r_config = r["am-job-goodjob"]['container_args']['NetworkingConfig']['EndpointsConfig']
       expect(r_config).to have_key("am-public")
 
       s = config_leo.config_to_containers('jobs', 'secretjob')
-      s_config = s["am-anon-job-secretjob"]['container_args']['NetworkingConfig']['EndpointsConfig']
+      s_config = s["am-job-secretjob"]['container_args']['NetworkingConfig']['EndpointsConfig']
       expect(s_config).to have_key("am-anon")
     end
 
@@ -176,7 +176,7 @@ NETCONFIG
 
     it "adds the bound IPv6 Address" do
       s = config_leo.config_to_containers('apps', 'frontendbot')
-      expect(s["am-public-app-frontendbot"]['container_args']['HostConfig']['PortBindings']).to eq(
+      expect(s["am-app-frontendbot"]['container_args']['HostConfig']['PortBindings']).to eq(
         {"10/tcp"=>
           [{'HostPort'=>'10'},{'HostPort'=>'10', 'HostIp'=>'a:b:c:d102'}],
         "4410/tcp"=>

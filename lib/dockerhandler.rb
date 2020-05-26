@@ -353,15 +353,13 @@ Usage: bee2 -c <config> -d COMMAND
 
       # Multiple Defined Networks
       network = @network
-      l_prefix = @prefix
       if cfg.has_key?('network')
-        network = "#{l_prefix}-#{cfg['network']}"
-        l_prefix = network
+        network = "#{@prefix}-#{cfg['network']}"
       end
 
       ipv6addr = @config.fetch('servers', {}).fetch(@server, {}).fetch('ip', {}).fetch(cfg['network'], {}).fetch('ipv6', nil)
 
-      create_container("#{l_prefix}-#{tcfg[:prefix]}-#{name}",
+      create_container("#{@prefix}-#{tcfg[:prefix]}-#{name}",
         cfg.fetch('image', nil),
         tcfg[:prefix],
         cfg.fetch('cmd', nil),
@@ -373,6 +371,7 @@ Usage: bee2 -c <config> -d COMMAND
         cfg.fetch('dockerfile', nil),
         cfg.fetch('ports', nil),
         transform_envs(name, cfg.fetch('env', []), tcfg[:prefix]),
+        cfg.fetch('labels', nil),
         cfg.fetch('volumes', nil),
         cfg.fetch('ipv4', nil),
         # ipv6 addr is for the public network IPv6 NAT
@@ -383,7 +382,7 @@ Usage: bee2 -c <config> -d COMMAND
     }.inject(&:merge)
   end
 
-  def create_container(name, image, cprefix, cmd, network, build_dir, git, branch, git_dir, dockerfile, ports, env, volumes, ipv4, ipv6, static_ipv6 = nil)
+  def create_container(name, image, cprefix, cmd, network, build_dir, git, branch, git_dir, dockerfile, ports, env, labels, volumes, ipv4, ipv6, static_ipv6 = nil)
     {
      name => {
        'image' => image,
@@ -394,6 +393,7 @@ Usage: bee2 -c <config> -d COMMAND
        'dockerfile' => dockerfile,
        'container_args' => {
          'Env' => env,
+         'Labels' => labels,
          'Cmd' => (cmd.split(' ') if not cmd.nil?),
          'NetworkingConfig' =>
            {'EndpointsConfig' =>

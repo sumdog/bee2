@@ -50,6 +50,9 @@ RSpec.describe DockerHandler do
           cmd: some_command -a -f -t
           db:
             - postgres
+          labels:
+            lbl1: some.label.attr
+            lbl2: some.other.label.attr
         single-db-app:
           git: git://single-app
           git_dir: app/dockerfile
@@ -223,6 +226,20 @@ RSpec.describe DockerHandler do
       expect(r["#{prefix}-app-pixels"]['branch']).to eq('docker')
       expect(r["#{prefix}-app-pixels"]['git_dir']).to eq('system/dockerfiles')
       expect(r["#{prefix}-app-pixels"]['dockerfile']).to eq('Dockerfile.apache')
+    end
+  end
+
+  describe "labels" do
+    it "adds labels correctly" do
+      r = config_web1.config_to_containers('apps', 'image-poster')
+      labels = r["#{prefix}-app-image-poster"]['container_args']['Labels']
+      expect(labels.size).to be(2)
+      expect(labels).to include("lbl1" => "some.label.attr")
+      expect(labels).to include("lbl2" => "some.other.label.attr")
+    end
+    it "handles containers without labels correctly" do
+      r = config_web1.config_to_containers('apps', 'single-db-app')
+      expect(r["#{prefix}-app-single-db-app"]['container_args']).not_to have_key('Labels')
     end
   end
 
