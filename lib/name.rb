@@ -66,14 +66,18 @@ class NameProvisioner < Provisioner
 
           api_call = "domains/#{Util.base_domain(domain)}/records"
           existing = request('GET', api_call)
-          cur = existing.fetch('records', {}).select { |r| r['fqdn'] == "#{domain}." }.first
 
           {'ipv4':'A', 'ipv6': 'AAAA'}.each { |ipv, record_type|
             ipv = ipv.to_s
             if @config['servers'][server]['ip'][dns_set].include?(ipv)
               cur_ip = @config['servers'][server]['ip'][dns_set][ipv]
-              params = {'host' => Util.host_domain(domain), 'type' => record_type, 'answer' => cur_ip, 'ttl'=>'300'}
+              params = {'host' => Util.host_domain(domain), 'type' => record_type, 'answer' => cur_ip, 'ttl'=>'3600'}
               log_msg = "#{cur_ip} :: #{domain}"
+
+              cur = existing.fetch('records', {}).select { |r|
+                r['fqdn'] == "#{domain}." and r['type'] == record_type
+              }.first
+              # @log.debug("Current Record: #{cur}")
 
               if cur.nil?
                 @log.info("Creating #{log_msg}")
