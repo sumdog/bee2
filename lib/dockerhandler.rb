@@ -352,18 +352,24 @@ Usage: bee2 -c <config> -d COMMAND
       end
 
       # Multiple Defined Networks
-      network = @network
-      if cfg.has_key?('network')
-        network = "#{@prefix}-#{cfg['network']}"
+      networks = [@network]
+      if cfg.has_key?('networks')
+        networks = cfg['networks'].map { |n| "#{@prefix}-#{n}" }
       end
 
-      ipv6addr = @config.fetch('servers', {}).fetch(@server, {}).fetch('ip', {}).fetch(cfg['network'], {}).fetch('ipv6', nil)
+      # If there are multiple networks defined for a container
+      # the first one is used for the IPv6 address
+      ipv6addr = @config.fetch('servers', {}).
+                         fetch(@server, {}).
+                         fetch('ip', {}).
+                         fetch(cfg.fetch('networks', []).first, {}).
+                         fetch('ipv6', nil)
 
       create_container("#{@prefix}-#{tcfg[:prefix]}-#{name}",
         cfg.fetch('image', nil),
         tcfg[:prefix],
         cfg.fetch('cmd', nil),
-        network,
+        networks,
         build_dir,
         cfg.fetch('git', nil),
         cfg.fetch('branch', nil),
@@ -382,7 +388,7 @@ Usage: bee2 -c <config> -d COMMAND
     }.inject(&:merge)
   end
 
-  def create_container(name, image, cprefix, cmd, network, build_dir, git, branch, git_dir, dockerfile, ports, env, labels, volumes, ipv4, ipv6, static_ipv6 = nil)
+  def create_container(name, image, cprefix, cmd, networks, build_dir, git, branch, git_dir, dockerfile, ports, env, labels, volumes, ipv4, ipv6, static_ipv6 = nil)
     {
      name => {
        'image' => image,
@@ -391,13 +397,14 @@ Usage: bee2 -c <config> -d COMMAND
        'branch' => branch,
        'git_dir' => git_dir,
        'dockerfile' => dockerfile,
+       'additional_networks' => networks[1..-1],
        'container_args' => {
          'Env' => env,
          'Labels' => labels,
          'Cmd' => (cmd.split(' ') if not cmd.nil?),
          'NetworkingConfig' =>
            {'EndpointsConfig' =>
-             {network =>
+             {networks.first =>
                {
                  'IPAMConfig' => {'IPv6Address' => static_ipv6 }.reject{ |k,v| v.nil? }
                }
@@ -471,6 +478,14 @@ Usage: bee2 -c <config> -d COMMAND
             'name' => "#{name}"
           }.merge(params['container_args'])
         )
+
+        if params['additional_networks']
+          params['additional_networks'].each { |net|
+            @log.info("Adding additional network #{net}")
+            docker_network = Docker::Network.all.select { |n| n.info['Name'] == net }.first
+            docker_network.connect(c.id)
+          }
+        end
 
         c.start()
         @log.info("#{name} container started")

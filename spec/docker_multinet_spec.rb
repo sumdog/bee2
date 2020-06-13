@@ -59,10 +59,12 @@ docker:
     jobs:
       goodjob:
         image: nginx
-        network: public
+        networks:
+          - public
       secretjob:
         image: apache
-        network: anon
+        networks:
+          - anon
       ujob:
         build_dir: Foo
     applications:
@@ -72,15 +74,19 @@ docker:
           production: false
         volumes:
           - data:/someapp
-        network: public
+        networks:
+          - public
       hiddenbot:
         image: scum/hiddenbot:v1.2
-        network: anon
+        networks:
+          - anon
       disconbot:
         image: foo:lts
       frontendbot:
         image: bee
-        network: public
+        networks:
+          - public
+          - nosix
         ports:
           - 10
           - 4410
@@ -122,6 +128,14 @@ NETCONFIG
       t = config_leo.config_to_containers('jobs', 'ujob')
       t_config = t["am-job-ujob"]['container_args']['NetworkingConfig']['EndpointsConfig']
       expect(t_config).to have_key("am-network")
+    end
+
+    it "adds multiple networks if specified" do
+      t = config_leo.config_to_containers('apps', 'frontendbot')
+      t_config = t["am-app-frontendbot"]['container_args']['NetworkingConfig']['EndpointsConfig']
+      expect(t_config).to have_key("am-public")
+      expect(t["am-app-frontendbot"]['additional_networks'].size).to be(1)
+      expect(t["am-app-frontendbot"]['additional_networks']).to include("am-nosix")
     end
 
   end
