@@ -397,6 +397,7 @@ Usage: bee2 -c <config> -d COMMAND
        'branch' => branch,
        'git_dir' => git_dir,
        'dockerfile' => dockerfile,
+       'primary_network' => networks.first,
        'additional_networks' => networks[1..-1],
        'container_args' => {
          'Env' => env,
@@ -438,7 +439,12 @@ Usage: bee2 -c <config> -d COMMAND
         image = case
         when params.key?('build_dir')
           @log.info('Creating Image for %s' %[name])
-          Docker::Image.build_from_dir(params['build_dir']).id
+          docker_params = {}
+          if params.key?('primary_network')
+            @log.info("Building image on network #{params['primary_network']}")
+            docker_params['networkmode'] = params['primary_network']
+          end
+          Docker::Image.build_from_dir(params['build_dir'], docker_params).id
         when params.key?('git')
           Dir.mktmpdir {|git_dir|
             @log.info("Git Clone #{params['git']}")
@@ -461,6 +467,10 @@ Usage: bee2 -c <config> -d COMMAND
             if params.key?('dockerfile')
               @log.info("Using custom dockerfile: #{params['dockerfile']}")
               docker_params['dockerfile'] = params['dockerfile']
+            end
+            if params.key?('primary_network')
+              @log.info("Building image on network #{params['primary_network']}")
+              docker_params['networkmode'] = params['primary_network']
             end
             Docker::Image.build_from_dir(docker_dir, docker_params).id
           }
