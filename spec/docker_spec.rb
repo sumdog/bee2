@@ -1,20 +1,9 @@
 require 'yaml'
 require_relative '../lib/dockerhandler'
 require 'logger'
+require 'mocks.rb'
 
 log = Logger.new(STDOUT)
-
-class MockPassStore
-
-  def initialize()
-  end
-
-  ## rescue GPGME::Error::DecryptFailed upstream for failed passwords
-  def get_or_generate_password(folder, name)
-    return "passfor:#{folder}:#{name}"
-  end
-
-end
 
 RSpec.describe DockerHandler do
   prefix = 'foo2'
