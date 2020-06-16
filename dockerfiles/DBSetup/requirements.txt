@@ -1,2 +1,2 @@
-mysql-connector-python==8.0.5
-psycopg2-binary==2.7.4
+mysql-connector-python==8.0.20
+psycopg2-binary==2.8.5
