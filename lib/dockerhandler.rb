@@ -136,6 +136,9 @@ Usage: bee2 -c <config> -d COMMAND
             "com.docker.network.bridge.host_binding_ipv4" =>
                 @config.fetch('servers', {}).fetch(@server, {})
                     .fetch('ip',{}).fetch(name, {}).fetch('ipv4', nil),
+            "com.docker.network.bridge.host_binding_ipv6" =>
+                @config.fetch('servers', {}).fetch(@server, {})
+                    .fetch('ip',{}).fetch(name, {}).fetch('ipv6', nil),
             "com.docker.network.bridge.enable_ip_masquerade" => cfg['masquerade'] == false ? "false" : nil,
             "com.docker.network.bridge.name" => cfg.fetch('bridge', nil),
             "com.docker.network.container_interface_prefix" => cfg.fetch('ifprefix', nil)
