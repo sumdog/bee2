@@ -156,8 +156,8 @@ def salt():
 def domain_list():
     lst = []
     """convert DOMAINS env variable to a list of names"""
-    for d in environ['DOMAINS'].split(' '):
-        lst = lst + d.split(':')[1].split(',')
+    for d in environ['DOMAINS'].split(','):
+        lst.append(d.strip())
     return lst
 
 
@@ -182,9 +182,9 @@ if __name__ == '__main__':
 
     for d in domains:
 
-        # remove port if present
-        if '/' in d:
-            d = d.split('/')[0]
+        # # remove port if present
+        # if '/' in d:
+        #     d = d.split('/')[0]
 
         if path.exists(path.join(logs, '{}.log'.format(d))):
             conf = template.format(logs, d, d, d, d, awdata)

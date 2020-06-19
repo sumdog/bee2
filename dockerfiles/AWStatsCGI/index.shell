@@ -1,0 +1,10 @@
+#!/bin/bash
+echo "Content-type: text/html"
+echo ""
+echo "<html><body><ul>"
+cd /awstats/config
+for f in *; do
+  site=$(echo $f | sed -e "s/awstats\.//" -e "s/\.conf$//")
+  echo "<li><a href=\"/stats/awstats.pl?config=$site\">$site</a></li>"
+done
+echo "</ul></body></html>"
