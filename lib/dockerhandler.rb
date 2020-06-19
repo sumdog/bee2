@@ -368,7 +368,26 @@ Usage: bee2 -c <config> -d COMMAND
                          fetch(cfg.fetch('networks', []).first, {}).
                          fetch('ipv6', nil)
 
-      create_container("#{@prefix}-#{tcfg[:prefix]}-#{name}",
+      container_name = "#{@prefix}-#{tcfg[:prefix]}-#{name}"
+
+      labels = cfg.fetch('labels', {})
+      if cfg.has_key?('traefik')
+        if cfg['traefik'].has_key?('http')
+          if cfg['traefik']['http'].has_key?('port')
+            labels["traefik.http.services.#{container_name}.loadbalancer.server.port"] = cfg['traefik']['http']['port'].to_s
+          end
+          if cfg['traefik']['http'].has_key?('hosts')
+            hosts = cfg['traefik']['http']['hosts']
+            labels["traefik.http.routers.#{container_name}.rule"] = "Host(#{hosts.map { |host| "`#{host}`" }.join(',')})"
+          end
+          if cfg['traefik']['http']['tls'] == 'enabled'
+            labels["traefik.http.routers.#{container_name}.entrypoints"] = 'websecure'
+            labels["traefik.http.routers.#{container_name}.tls.certresolver"] = 'lec'
+          end
+        end
+      end
+
+      create_container(container_name,
         cfg.fetch('image', nil),
         tcfg[:prefix],
         cfg.fetch('cmd', nil),
