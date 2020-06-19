@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 from os import environ as env, unlink, system
 import sys
 from os.path import join, basename

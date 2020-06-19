@@ -6,7 +6,9 @@ mkdir -p $BACKUP_VOL_DIR
 
 if [ "$VOLUME_ENABLED" = "enabled" ]; then
   echo "Backing up Docker Volumes in /backup"
-  duplicity --no-encryption /backup b2://$BB_APP_ID:$BB_APP_KEY@$BB_VOL_BUCKET
+  duplicity --no-encryption --allow-source-mismatch --full-if-older-than 1M /backup b2://$BB_APP_ID:$BB_APP_KEY@$BB_VOL_BUCKET
+  echo "Removing backups older than 2 months"
+  duplicity remove-older-than 2M --force b2://$BB_APP_ID:$BB_APP_KEY@$BB_VOL_BUCKET
 else
   echo "Volume backups disabled"
 fi
