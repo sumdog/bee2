@@ -1,0 +1,15 @@
+#!/bin/sh
+
+set -e
+
+SOAPBOX_ZIP="/opt/pleroma/soapbox-fe.zip"
+
+mkdir -p /state/uploads /state/static /state/etc
+if [ -f $SOAPBOX_ZIP ]; then
+  busybox unzip $SOAPBOX_ZIP -o -d /state
+  rm $SOAPBOX_ZIP
+fi
+
+
+/opt/pleroma/bin/pleroma_ctl migrate
+exec /opt/pleroma/bin/pleroma start
