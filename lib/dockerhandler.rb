@@ -354,6 +354,12 @@ Usage: bee2 -c <config> -d COMMAND
         static_ipv6 = "#{ipv6_subet}#{ipv6_web}"
       end
 
+      # Statically Defined ipv4/ipv6 NATed addresses
+      static_ipv4 = cfg.fetch('static_ip', {}).fetch('ipv4', nil)
+      if static_ipv6.nil?
+        static_ipv6 = cfg.fetch('static_ip', {}).fetch('ipv6', nil)
+      end
+
       # Multiple Defined Networks
       networks = [@network]
       if cfg.has_key?('networks')
@@ -387,6 +393,15 @@ Usage: bee2 -c <config> -d COMMAND
         end
       end
 
+      extra_hosts = nil
+      if cfg.has_key?('internal_dns')
+        extra_hosts = cfg['internal_dns'].map { |k,v|
+          docker_cfg['applications'][v]['static_ip'].map { |ipv, ip|
+            "#{k}:#{ip}"
+          }
+        }.flatten
+      end
+
       create_container(container_name,
         cfg.fetch('image', nil),
         tcfg[:prefix],
@@ -405,12 +420,16 @@ Usage: bee2 -c <config> -d COMMAND
         # ipv6 addr is for the public network IPv6 NAT
         # static_ipv6 is for assinging a pulic IPv6 address to a container without IPv6 NAT
         ipv6addr,
-        static_ipv6
+        static_ipv6,
+        static_ipv4,
+        extra_hosts
       )
     }.inject(&:merge)
   end
 
-  def create_container(name, image, cprefix, cmd, networks, build_dir, git, branch, git_dir, dockerfile, ports, env, labels, volumes, ipv4, ipv6, static_ipv6 = nil)
+  def create_container(name, image, cprefix, cmd, networks, build_dir,
+                       git, branch, git_dir, dockerfile, ports, env, labels, volumes,
+                       ipv4, ipv6, static_ipv6 = nil, static_ipv4 = nil, extra_hosts = nil)
     {
      name => {
        'image' => image,
@@ -429,7 +448,10 @@ Usage: bee2 -c <config> -d COMMAND
            {'EndpointsConfig' =>
              {networks.first =>
                {
-                 'IPAMConfig' => {'IPv6Address' => static_ipv6 }.reject{ |k,v| v.nil? }
+                 'IPAMConfig' => {
+                   'IPv6Address' => static_ipv6,
+                   'IPv4Address' => static_ipv4
+                 }.reject{ |k,v| v.nil? }
                }
              }
            },
@@ -437,6 +459,7 @@ Usage: bee2 -c <config> -d COMMAND
          'HostConfig' => {
            'RestartPolicy' => { 'Name' => (cprefix == 'app' ? 'unless-stopped' : 'no') },
            'Binds' => (volumes if not volumes.nil?),
+           'ExtraHosts' => extra_hosts,
            'PortBindings' => (ports.map { |port|
              {
                "#{port}/tcp" => [
