@@ -8,6 +8,7 @@ ENV APP_DIR /var/www/html
 RUN a2enmod rewrite
 RUN sed -i "s/80/8080/g" /etc/apache2/ports.conf
 COPY 000-default.conf /etc/apache2/sites-available/000-default.conf
+COPY ports.conf /etc/apache2/ports.conf
 EXPOSE 8080
 
 # PHP Extensions
