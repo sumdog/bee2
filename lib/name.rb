@@ -8,6 +8,7 @@ class NameProvisioner < Provisioner
   def initialize(config, log)
     super(config, log)
     @config = config
+    @domain_records = {}
   end
 
   def request(method, path, args = {}, ok_lambda = nil, error_code = nil, err_lambda = nil)
@@ -58,36 +59,75 @@ class NameProvisioner < Provisioner
     end
   end
 
+  def dns_upsert(domain, name, record_type, data, ttl = 3600)
+
+    dns_api_call = "domains/#{domain}/records"
+
+    if @domain_records[domain].nil?
+      @domain_records[domain] = request('GET', dns_api_call)
+    end
+
+    cur = @domain_records[domain].fetch('records', {}).select { |r|
+      (r['fqdn'] == "#{domain}." or r['fqdn'] == "#{name}.#{domain}.") and r['type'] == record_type
+    }.first
+
+    params = {'host' => name, 'type' => record_type, 'answer' => data, 'ttl'=> ttl}
+    fqdn = "#{name}.#{domain}".sub(/^[0.]*/, "")
+    log_msg = "#{data} :: #{fqdn}"
+
+    if cur.nil?
+      @log.info("Creating #{log_msg}")
+      request('POST', dns_api_call, params)
+    elsif cur['answer'] == data
+      @log.info("DNS Correct. Skipping #{log_msg}")
+    else
+      @log.info("Updating #{log_msg}")
+      request('PUT', "#{dns_api_call}/#{cur['id']}", params)
+    end
+  end
+
+
+  def mail_dns(server)
+
+    mail_config = @config['servers'][server]['mail']
+
+    dkim_key = OpenSSL::PKey::RSA.new(File.read(mail_config['dkim_private']))
+    b64_key = Base64.strict_encode64(dkim_key.public_key.to_der)
+    dkim_dns = "k=rsa; t=s; p=#{b64_key}"
+
+    mail_network = mail_config['network']
+    mail_ipv4 = @config['servers'][server]['ip'][mail_network]['ipv4']
+    mail_ipv6 = @config['servers'][server]['ip'][mail_network]['ipv6']
+
+    mail_config['domains'].each { |domain|
+      [
+        { 'name' => '', 'type' => 'MX', 'data' => "mail.#{domain}" },
+        { 'name' => 'mail', 'type' => 'A', 'data' => mail_ipv4 },
+        { 'name' => 'mail', 'type' => 'AAAA', 'data' => mail_ipv6 },
+        { 'name' => '_dmarc', 'type' => 'TXT', 'data' => "#{mail_config['dmarc']}" },
+        { 'name' => 'dkim1._domainkey', 'type' => 'TXT', 'data' => "#{dkim_dns}" },
+        { 'name' => '', 'type' => 'TXT', 'data' => "#{mail_config['spf']}" }
+      ].each { |d|
+        @log.info("Creating/Updating Mail Record #{d['name']} for #{d['domain']} #{d['type']} #{d['data']}")
+        dns_upsert(domain, d['name'], d['type'], d['data'])
+      }
+    }
+  end
+
+
   def provision(rebuild = false, server = nil)
 
     @config['servers'].each { |server, cfg|
+
+      mail_dns(server)
+
       cfg['dns'].each { |dns_set, domains|
         domains.each { |domain|
-
-          api_call = "domains/#{Util.base_domain(domain)}/records"
-          existing = request('GET', api_call)
-
           {'ipv4':'A', 'ipv6': 'AAAA'}.each { |ipv, record_type|
             ipv = ipv.to_s
             if @config['servers'][server]['ip'][dns_set].include?(ipv)
               cur_ip = @config['servers'][server]['ip'][dns_set][ipv]
-              params = {'host' => Util.host_domain(domain), 'type' => record_type, 'answer' => cur_ip, 'ttl'=>'3600'}
-              log_msg = "#{cur_ip} :: #{domain}"
-
-              cur = existing.fetch('records', {}).select { |r|
-                r['fqdn'] == "#{domain}." and r['type'] == record_type
-              }.first
-              # @log.debug("Current Record: #{cur}")
-
-              if cur.nil?
-                @log.info("Creating #{log_msg}")
-                request('POST', api_call, params)
-              elsif cur['answer'] == cur_ip
-                @log.info("DNS Correct. Skipping #{log_msg}")
-              else
-                @log.info("Updating #{log_msg}")
-                request('PUT', "#{api_call}/#{cur['id']}", params)
-              end
+              dns_upsert(Util.base_domain(domain), Util.host_domain(domain), record_type, cur_ip)
             else
               @log.warn("No #{ipv} records for #{dns_set}")
             end
