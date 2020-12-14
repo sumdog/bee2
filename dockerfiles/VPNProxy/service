@@ -1,0 +1,7 @@
+#!/bin/sh
+
+ip ro add $VPN_SUBNET via $GATEWAY
+
+exec socat -d -d \
+    TCP4-LISTEN:$LISTEN_PORT,reuseaddr,fork,su=nobody \
+    TCP4:$REMOTE_ADDR
