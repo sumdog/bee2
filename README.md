@@ -15,6 +15,9 @@ You can learn more about how I designed and wrote Bee2 from the following posts:
 * Part 3: [Bee2: Automating HAProxy and LetsEncrypt with Docker](http://penguindreams.org/blog/bee2-automating-haproxy-and-letsencrypt-with-docker/)
 * Part 4: [Bee2 In Production: IPv6, HAProxy and Docker](https://penguindreams.org/blog/bee2-in-production-ipv6-haproxy-and-docker/)
 
+# Should I Use This?
+
+Probably not. I wrote this because I become frustrated with Terraform and Docker Compose, but I realize I've pretty much just rewritten Terraform and Docker Compose. It has a lot of good unit tests, but it has very few useful error messages. The documentation is long, unwieldy and out of date. As of December 2020, I still use it to run everything I self-host.
 
 # Installation
 
