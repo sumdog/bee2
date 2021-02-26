@@ -71,6 +71,7 @@ Usage: bee2 -c <config> -d COMMAND
       scheme: 'https',
       read_timeout: @config.fetch('docker',{}).fetch('read_timeout', 900)
     }
+    # Docker.authenticate!('username' => '', 'password' => '')
 
 
     if cmds[1] != 'test'
@@ -422,14 +423,15 @@ Usage: bee2 -c <config> -d COMMAND
         ipv6addr,
         static_ipv6,
         static_ipv4,
-        extra_hosts
+        extra_hosts,
+        cfg.fetch('capadd', nil)
       )
     }.inject(&:merge)
   end
 
   def create_container(name, image, cprefix, cmd, networks, build_dir,
                        git, branch, git_dir, dockerfile, ports, env, labels, volumes,
-                       ipv4, ipv6, static_ipv6 = nil, static_ipv4 = nil, extra_hosts = nil)
+                       ipv4, ipv6, static_ipv6 = nil, static_ipv4 = nil, extra_hosts = nil, capadd)
     {
      name => {
        'image' => image,
@@ -457,6 +459,7 @@ Usage: bee2 -c <config> -d COMMAND
            },
          'ExposedPorts' => (ports.map { |port| {"#{port}/tcp" => {}}}.inject(:merge) if not ports.nil?),
          'HostConfig' => {
+           'CapAdd' => capadd,
            'RestartPolicy' => { 'Name' => (cprefix == 'app' ? 'unless-stopped' : 'no') },
            'Binds' => (volumes if not volumes.nil?),
            'ExtraHosts' => extra_hosts,
