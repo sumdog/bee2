@@ -298,7 +298,7 @@ Usage: bee2 -c <config> -d COMMAND
           "#{var.upcase}=#{@prefix}-job-#{ref_container.first[0]}"
         end
       else
-        "#{var.upcase}=#{val}"
+        "#{var}=#{val}"
       end
     }.flatten
   end
@@ -424,14 +424,16 @@ Usage: bee2 -c <config> -d COMMAND
         static_ipv6,
         static_ipv4,
         extra_hosts,
-        cfg.fetch('capadd', nil)
+        cfg.fetch('capadd', nil),
+        cfg.fetch('hostname', nil)
       )
     }.inject(&:merge)
   end
 
   def create_container(name, image, cprefix, cmd, networks, build_dir,
                        git, branch, git_dir, dockerfile, ports, env, labels, volumes,
-                       ipv4, ipv6, static_ipv6 = nil, static_ipv4 = nil, extra_hosts = nil, capadd)
+                       ipv4, ipv6, static_ipv6 = nil, static_ipv4 = nil,
+                       extra_hosts = nil, capadd = nil, hostname = nil)
     {
      name => {
        'image' => image,
@@ -443,6 +445,7 @@ Usage: bee2 -c <config> -d COMMAND
        'primary_network' => networks.first,
        'additional_networks' => networks[1..-1],
        'container_args' => {
+         'Hostname'=> hostname,
          'Env' => env,
          'Labels' => labels,
          'Cmd' => (cmd.split(' ') if not cmd.nil?),

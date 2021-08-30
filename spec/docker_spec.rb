@@ -342,12 +342,12 @@ RSpec.describe DockerHandler do
 
     it "job containers should start with job prefix (web1)" do
       r = config_web1.config_to_containers('jobs', 'runner')
-      expect(r["#{prefix}-job-runner"]['container_args']['Env']).to include("TYPE=task")
+      expect(r["#{prefix}-job-runner"]['container_args']['Env']).to include("type=task")
     end
 
     it "job containers should start with job prefix (web2)" do
       r = config_web2.config_to_containers('jobs', 'runner')
-      expect(r["#{prefix2}-job-runner"]['container_args']['Env']).to include("TYPE=batch")
+      expect(r["#{prefix2}-job-runner"]['container_args']['Env']).to include("type=batch")
     end
 
     it "mapping with exposed ports" do
@@ -380,14 +380,14 @@ RSpec.describe DockerHandler do
     it "app configuration local to web1" do
       r = config_web1.config_to_containers('apps', 'con')
       expect(r["#{prefix}-app-con"]['container_args']['Env']).to contain_exactly(
-        "LOCATION=Melbourne"
+        "location=Melbourne"
       )
     end
 
     it "app configuration local to web2" do
       r = config_web2.config_to_containers('apps', 'con')
       expect(r["#{prefix2}-app-con"]['container_args']['Env']).to contain_exactly(
-        "LOCATION=Wellington"
+        "location=Wellington"
       )
     end
 
