@@ -1,0 +1,58 @@
+#!/bin/sh
+# Taken from: https://gist.github.com/kokumura/a6d819ddcb4efe54c5541fc15e1d0347
+
+# Ansible 'lineinfile' like function in Shell Script.
+# Works on both Bash and Zsh.
+
+function lineinfile(){
+  if [[ $# != 3 ]];then
+    local THIS_FUNC_NAME="${funcstack[1]-}${FUNCNAME[0]-}"
+    echo "$THIS_FUNC_NAME - 3 arguments are expected. given $#. args=[$@]" >&2
+    echo "usage: $THIS_FUNC_NAME PATTERN LINE FILE" >&2
+    return 1
+  fi
+  local PATTERN="$1"
+  local LINE="$2"
+  local FILE="$3"
+  if grep -E -q "${PATTERN}" "${FILE}" ;then
+    
+    ## solution 1: works with GNU sed well, but not works with BSD sed.
+    # sed -E -i '' "/${PATTERN//\//\\/}/c${LINE}" "${FILE}"
+
+    ## solution 2: works with both (GNU|BSD) sed, but get useless *.bak file generated.
+    # sed -E -i.bak "/${PATTERN//\//\\/}/c\\"$'\n'"${LINE}" "${FILE}"
+
+    ## solution 3: give up to use sed, using perl instead.
+    PATTERN="${PATTERN}" LINE="${LINE}" perl -i -nle 'if(/$ENV{"PATTERN"}/){print $ENV{"LINE"}}else{print}' "${FILE}"
+
+  else
+    echo "$LINE" >> "$FILE"
+  fi
+}
+
+######################
+# example
+######################
+
+# write some lines to 'test.txt'
+#cat <<EOF > test.txt
+#foo = FOO1 # first occurence
+#bar = BAR
+#foo = FOO2 # second occurence
+#EOF
+
+# usage: lineinfile PATTERN LINE FILE
+
+# if some lines in FILE matches PATTEN, all of them are replaced with LINE.
+#lineinfile '^foo\s*=\s*' "foo = POO # changed!" test.txt
+
+# if no lines in FILE matches PATTERN, LINE is appended to end of FILE.
+#lineinfile '^baz\s*=' "baz = BAZ" test.txt
+
+#cat test.txt
+# now 'test.txt' will contain:
+#
+#   foo = POO # changed!
+#   bar = BAR
+#   foo = POO # changed!
+#   baz = BAZ

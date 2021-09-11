@@ -1,0 +1,21 @@
+#!/bin/sh
+
+if [ -x /mail/bin/startup ]; then
+  echo "Running /mail/bin/startup"
+  /mail/bin/startup
+fi
+
+echo "Setting up spampd"
+mkdir -p /mail/db/spampd || true
+chown vmail:vmail /mail/db/spampd
+
+echo "Setting up Dovecot"
+source /usr/share/misc/lineinfile
+lineinfile '^#?mail_location' "mail_location = maildir:/mail/spool/%n/Mail" /etc/dovecot/conf.d/10-mail.conf
+lineinfile "^#?protocols =" "protocols = imap" /etc/dovecot/dovecot.conf
+lineinfile "^#log_path =" "log_path = /dev/stderr" /etc/dovecot/conf.d/10-logging.conf
+
+echo "DKIM Proxy Permissions"
+chown dkimproxy:dkimproxy /mail/config/dkim.key /mail/config/dkimproxy_out.conf
+
+exec /usr/bin/supervisord -n -c /etc/supervisord.conf

@@ -101,9 +101,9 @@ class NameProvisioner < Provisioner
 
     mail_config['domains'].each { |domain|
       [
-        { 'name' => '', 'type' => 'MX', 'data' => "mail.#{domain}" },
-        { 'name' => 'mail', 'type' => 'A', 'data' => mail_ipv4 },
-        { 'name' => 'mail', 'type' => 'AAAA', 'data' => mail_ipv6 },
+        { 'name' => '', 'type' => 'MX', 'data' => "#{mail_config['mx']}" },
+        # { 'name' => 'mail', 'type' => 'A', 'data' => mail_ipv4 },
+        # { 'name' => 'mail', 'type' => 'AAAA', 'data' => mail_ipv6 },
         { 'name' => '_dmarc', 'type' => 'TXT', 'data' => "#{mail_config['dmarc']}" },
         { 'name' => 'dkim1._domainkey', 'type' => 'TXT', 'data' => "#{dkim_dns}" },
         { 'name' => '', 'type' => 'TXT', 'data' => "#{mail_config['spf']}" }
