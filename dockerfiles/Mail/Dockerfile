@@ -1,7 +1,7 @@
 FROM alpine:3.13.6
 
 RUN apk update && \
-    apk add opensmtpd supervisor certbot dkimproxy clamav-libunrar \
+    apk add opensmtpd supervisor certbot dkimproxy clamav-libunrar spamassassin \
     dovecot-pgsql dovecot perl-mail-spamassassin freshclam clamsmtp clamav-daemon opensmtpd-table-passwd && \
     apk add fdm --repository=http://dl-cdn.alpinelinux.org/alpine/edge/testing
 
