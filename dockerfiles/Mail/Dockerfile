@@ -8,6 +8,7 @@ RUN apk update && \
 
 # SpamPD in alpine repo is out of date
 RUN wget https://github.com/mpaperno/spampd/archive/refs/tags/2.61.tar.gz
+RUN echo "91e60f10745ea4f9c27b9e57619a1bf246ab9a88ea1b88c4f39f8af607e2dbae  2.61.tar.gz" | sha256sum -c
 RUN tar xvfz 2.61.tar.gz
 RUN rm 2.61.tar.gz
 
