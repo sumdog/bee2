@@ -1,6 +1,6 @@
 FROM python:3
 
-ARG VERSION=3.0.4
+ARG VERSION=3.1.8
 RUN pip install pytz passlib bcrypt radicale==$VERSION
 
 ENV RADICALE_CONFIG /etc/radicale/config
