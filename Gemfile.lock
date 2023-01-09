@@ -1,12 +1,15 @@
 GEM
   remote: https://rubygems.org/
   specs:
+    addressable (2.8.1)
+      public_suffix (>= 2.0.2, < 6.0)
     diff-lcs (1.5.0)
     docker-api (1.34.2)
       excon (>= 0.47.0)
       multi_json
     excon (0.92.4)
-    git (1.11.0)
+    git (1.13.0)
+      addressable (~> 2.8)
       rchardet (~> 1.8)
     gpgme (2.0.16)
       mini_portile2 (~> 2.3)
@@ -33,7 +36,7 @@ PLATFORMS
 
 DEPENDENCIES
   docker-api (= 1.34.2)
-  git (= 1.11.0)
+  git (= 1.13.0)
   gpgme (= 2.0.16)
   public_suffix (= 3.0.3)
   rspec (~> 3.0)
